@@ -331,11 +331,19 @@ function weightedSample(scores, n, noise = 0.18) {
 }
 
 /* ── OPAP Statistics API ── */
-async function fetchStatistics(drawRange = 1801) {
-  const res = await fetch(`${STATS_API}?drawRange=${drawRange}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.statistics || data.numberStatistics || data.content || []);
+async function fetchStatistics() {
+  const candidates = [1801, 1000, 500, 200, 100, 50];
+  let lastErr = null;
+  for (const dr of candidates) {
+    const res = await fetch(`${STATS_API}?drawRange=${dr}`);
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.statistics || data.numberStatistics || data.content || []);
+      if (list.length >= 70) return { list, drawRange: dr };
+    }
+    lastErr = `HTTP ${res.status} (drawRange=${dr})`;
+  }
+  throw new Error(lastErr || "Δεν βρέθηκε έγκυρο drawRange");
 }
 
 /* ── Main prediction logic ── */
@@ -348,8 +356,7 @@ async function predict() {
   statsCard.style.display = "none";
 
   try {
-    const stats = await fetchStatistics(1801);
-    if (!stats || stats.length < 70) throw new Error("Ανεπαρκή δεδομένα από OPAP API");
+    const { list: stats, drawRange } = await fetchStatistics();
 
     const occ = {}, lastD = {}, maxG = {};
     stats.forEach(s => {
@@ -373,7 +380,7 @@ async function predict() {
     renderStats(hot, cold, overdue);
 
     renderBalls(numbers);
-    badgeText.textContent = `OPAP Statistics API (1801 κληρώσεις) · ${new Date().toLocaleString("el-GR")}`;
+    badgeText.textContent = `OPAP Statistics API (${drawRange} κληρώσεις) · ${new Date().toLocaleString("el-GR")}`;
     badge.style.display = "inline-flex";
 
   } catch (err) {
