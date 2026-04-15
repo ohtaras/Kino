@@ -238,7 +238,6 @@
 
 <script>
 const GAME_ID   = 1100;
-const DRAWS_API = `https://api.opap.gr/draws/v3.0/${GAME_ID}`;
 const STATS_API = `https://api.opap.gr/games/v1.0/${GAME_ID}/statistics`;
 
 let count = 9;
@@ -331,39 +330,12 @@ function weightedSample(scores, n, noise = 0.18) {
   return selected.sort((a, b) => a - b);
 }
 
-/* ── Fallback: mathematical distribution ── */
-function mathPick(n) {
-  const picks = new Set();
-  while (picks.size < n) {
-    // Slightly favour middle range
-    const raw = Math.floor(Math.random() * 80) + 1;
-    const mid  = 40.5;
-    const bias = 1 - 0.3 * Math.abs(raw - mid) / mid;
-    if (Math.random() < bias) picks.add(raw);
-  }
-  return [...picks].sort((a, b) => a - b);
-}
-
 /* ── OPAP Statistics API ── */
 async function fetchStatistics(drawRange = 1801) {
   const res = await fetch(`${STATS_API}?drawRange=${drawRange}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return Array.isArray(data) ? data : (data.statistics || data.numberStatistics || data.content || []);
-}
-
-async function fetchLastDraws(limit = 200) {
-  const res = await fetch(`${DRAWS_API}/last/${limit}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.content || []);
-}
-
-function parseDrawNumbers(draw) {
-  const wn   = draw.winningNumbers || {};
-  const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
-  if (list.length === 20) return list.map(Number);
-  return null;
 }
 
 /* ── Main prediction logic ── */
@@ -376,72 +348,36 @@ async function predict() {
   statsCard.style.display = "none";
 
   try {
-    let numbers, method;
+    const stats = await fetchStatistics(1801);
+    if (!stats || stats.length < 70) throw new Error("Ανεπαρκή δεδομένα από OPAP API");
 
-    /* Strategy 1: OPAP Statistics */
-    try {
-      const stats = await fetchStatistics(1801);
-      if (stats.length >= 70) {
-        const occ    = {}, lastD = {}, maxG = {};
-        stats.forEach(s => {
-          const n = s.number ?? s.num;
-          occ[n]   = s.occurrences ?? 0;
-          lastD[n] = s.lastDraw    ?? 0;
-          maxG[n]  = s.maxGap      ?? 0;
-        });
-        const nOcc = normalize(occ), nLastD = normalize(lastD), nMaxG = normalize(maxG);
-        const scores = {};
-        for (let n = 1; n <= 80; n++) {
-          scores[n] = 0.35 * (nOcc[n]   ?? 0)
-                    + 0.40 * (nLastD[n]  ?? 0)
-                    + 0.25 * (nMaxG[n]   ?? 0);
-        }
-        numbers = weightedSample(scores, count);
-        method  = "OPAP Statistics API (1801 κληρώσεις)";
-
-        // Stats display
-        const hot     = [...stats].sort((a,b) => b.occurrences - a.occurrences).slice(0,10).map(s => s.number ?? s.num);
-        const cold    = [...stats].sort((a,b) => a.occurrences - b.occurrences).slice(0,10).map(s => s.number ?? s.num);
-        const overdue = [...stats].sort((a,b) => b.lastDraw - a.lastDraw).slice(0,10).map(s => s.number ?? s.num);
-        renderStats(hot, cold, overdue);
-      }
-    } catch (_) { /* fall through */ }
-
-    /* Strategy 2: Raw draws */
-    if (!numbers) {
-      try {
-        const raw = await fetchLastDraws(200);
-        const draws = raw.map(parseDrawNumbers).filter(Boolean);
-        if (draws.length >= 10) {
-          const freq = {}, gaps = {};
-          for (let n = 1; n <= 80; n++) { freq[n] = 0; }
-          draws.forEach(d => d.forEach(n => freq[n]++));
-          // Gap: index of last appearance (draws[0] = most recent)
-          for (let n = 1; n <= 80; n++) {
-            const idx = draws.findIndex(d => d.includes(n));
-            gaps[n] = idx === -1 ? draws.length : idx;
-          }
-          const nFreq = normalize(freq), nGap = normalize(gaps);
-          const scores = {};
-          for (let n = 1; n <= 80; n++) scores[n] = 0.4 * nFreq[n] + 0.6 * nGap[n];
-          numbers = weightedSample(scores, count);
-          method  = `Raw draws (${draws.length} κληρώσεις)`;
-        }
-      } catch (_) { /* fall through */ }
+    const occ = {}, lastD = {}, maxG = {};
+    stats.forEach(s => {
+      const n = s.number ?? s.num;
+      occ[n]   = s.occurrences ?? 0;
+      lastD[n] = s.lastDraw    ?? 0;
+      maxG[n]  = s.maxGap      ?? 0;
+    });
+    const nOcc = normalize(occ), nLastD = normalize(lastD), nMaxG = normalize(maxG);
+    const scores = {};
+    for (let n = 1; n <= 80; n++) {
+      scores[n] = 0.35 * (nOcc[n] ?? 0)
+                + 0.40 * (nLastD[n] ?? 0)
+                + 0.25 * (nMaxG[n] ?? 0);
     }
+    const numbers = weightedSample(scores, count);
 
-    /* Strategy 3: Fallback */
-    if (!numbers) {
-      numbers = mathPick(count);
-      method  = "Μαθηματική κατανομή";
-    }
+    const hot     = [...stats].sort((a,b) => b.occurrences - a.occurrences).slice(0,10).map(s => s.number ?? s.num);
+    const cold    = [...stats].sort((a,b) => a.occurrences - b.occurrences).slice(0,10).map(s => s.number ?? s.num);
+    const overdue = [...stats].sort((a,b) => b.lastDraw - a.lastDraw).slice(0,10).map(s => s.number ?? s.num);
+    renderStats(hot, cold, overdue);
 
     renderBalls(numbers);
-    badgeText.textContent = `${method} · ${new Date().toLocaleString("el-GR")}`;
+    badgeText.textContent = `OPAP Statistics API (1801 κληρώσεις) · ${new Date().toLocaleString("el-GR")}`;
     badge.style.display = "inline-flex";
 
   } catch (err) {
-    grid.innerHTML = `<span style="color:var(--red)">Σφάλμα: ${err.message}</span>`;
+    grid.innerHTML = `<span style="color:var(--red)">Σφάλμα σύνδεσης με OPAP API: ${err.message}</span>`;
   } finally {
     predictBtn.disabled = false;
     predictBtn.textContent = "Κάνε Πρόβλεψη";
