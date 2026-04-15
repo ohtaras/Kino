@@ -1,245 +1,235 @@
 """
 Kino Allwyn.gr - Statistical Analysis Engine
-Συχνότητες, hot/cold numbers, gap analysis, positional bias.
+Συχνότητες, hot/cold, gap analysis, positional bias.
+Υποστηρίζει τόσο raw draws όσο και προ-επεξεργασμένα OPAP statistics.
 """
 
-from collections import Counter, defaultdict
-from typing import Callable
-import math
+from collections import Counter
 import random
-
 
 TOTAL_NUMBERS = 80
 DRAW_SIZE = 20
 
 
 # ---------------------------------------------------------------------------
-# Βασικές στατιστικές
+# Από raw draws
 # ---------------------------------------------------------------------------
 
 def frequency_map(draws: list[list[int]]) -> dict[int, int]:
-    """Συχνότητα εμφάνισης κάθε αριθμού σε όλες τις κληρώσεις."""
     counter: Counter = Counter()
     for draw in draws:
         counter.update(draw)
-    return dict(counter)
+    return {n: counter.get(n, 0) for n in range(1, TOTAL_NUMBERS + 1)}
 
-
-def expected_frequency(draws: list[list[int]]) -> float:
-    """Αναμενόμενη συχνότητα για κάθε αριθμό (DRAW_SIZE / TOTAL_NUMBERS * #draws)."""
-    return len(draws) * DRAW_SIZE / TOTAL_NUMBERS
-
-
-def hot_numbers(freq: dict[int, int], top_n: int = 20) -> list[int]:
-    """Οι πιο συχνοί αριθμοί (hot)."""
-    return [n for n, _ in sorted(freq.items(), key=lambda x: -x[1])][:top_n]
-
-
-def cold_numbers(freq: dict[int, int], top_n: int = 20) -> list[int]:
-    """Οι λιγότερο συχνοί αριθμοί (cold/overdue)."""
-    return [n for n, _ in sorted(freq.items(), key=lambda x: x[1])][:top_n]
-
-
-# ---------------------------------------------------------------------------
-# Gap / Delay analysis
-# ---------------------------------------------------------------------------
 
 def gap_analysis(draws: list[list[int]]) -> dict[int, int]:
-    """
-    Για κάθε αριθμό: πόσες κληρώσεις πέρασαν από την τελευταία εμφάνισή του.
-    Μεγαλύτερο gap = πιο «οφειλόμενος».
-    """
+    """Πόσες κληρώσεις πέρασαν από την τελευταία εμφάνιση κάθε αριθμού."""
     last_seen: dict[int, int] = {}
-    for draw_idx, draw in enumerate(draws):
+    for idx, draw in enumerate(draws):
         for num in draw:
-            last_seen[num] = draw_idx
+            last_seen[num] = idx
+    total = len(draws)
+    return {
+        n: (total - 1 - last_seen[n]) if n in last_seen else total
+        for n in range(1, TOTAL_NUMBERS + 1)
+    }
 
-    total_draws = len(draws)
-    gaps = {}
-    for n in range(1, TOTAL_NUMBERS + 1):
-        if n in last_seen:
-            gaps[n] = total_draws - 1 - last_seen[n]
-        else:
-            gaps[n] = total_draws  # Δεν εμφανίστηκε ποτέ
-    return gaps
-
-
-# ---------------------------------------------------------------------------
-# Decade / zone analysis
-# ---------------------------------------------------------------------------
 
 def decade_weights(draws: list[list[int]]) -> dict[int, float]:
-    """
-    Βάρος για κάθε δεκάδα (1-10, 11-20, ... 71-80).
-    Επιστρέφει normalized weights (sum=1).
-    """
     decade_count: Counter = Counter()
     for draw in draws:
         for n in draw:
             decade_count[(n - 1) // 10] += 1
     total = sum(decade_count.values()) or 1
-    return {d: count / total for d, count in decade_count.items()}
+    return {d: c / total for d, c in decade_count.items()}
 
 
 # ---------------------------------------------------------------------------
-# Scoring function
+# Score από raw draws
 # ---------------------------------------------------------------------------
 
-def score_numbers(
+def score_from_draws(
     draws: list[list[int]],
     freq_weight: float = 0.35,
     gap_weight: float = 0.35,
     decade_weight: float = 0.30,
 ) -> dict[int, float]:
-    """
-    Υπολογίζει σύνθετο score για κάθε αριθμό 1-80.
-    Συνδυάζει: συχνότητα, gap (οφειλόμενοι), και decade balance.
-    """
-    freq = frequency_map(draws)
-    gaps = gap_analysis(draws)
-    dw = decade_weights(draws)
+    freq  = frequency_map(draws)
+    gaps  = gap_analysis(draws)
+    dw    = decade_weights(draws)
 
-    # Normalize συχνότητες (0..1)
-    max_freq = max(freq.values()) if freq else 1
-    min_freq = min(freq.values()) if freq else 0
+    max_freq = max(freq.values()) or 1
+    min_freq = min(freq.values())
     freq_range = max_freq - min_freq or 1
-
-    # Normalize gaps (0..1) — μεγαλύτερο gap = υψηλότερο score
-    max_gap = max(gaps.values()) if gaps else 1
+    max_gap  = max(gaps.values()) or 1
 
     scores: dict[int, float] = {}
     for n in range(1, TOTAL_NUMBERS + 1):
-        f = freq.get(n, 0)
-        g = gaps.get(n, len(draws))
-        decade = (n - 1) // 10
-        dw_score = dw.get(decade, DRAW_SIZE / TOTAL_NUMBERS)
-
-        # Normalized scores
-        freq_score = (f - min_freq) / freq_range  # high freq = high score
-        gap_score = g / max_gap                    # high gap = high score
-        # decade: τιμωρούμε τις δεκάδες που ήδη έχουν πολλές εμφανίσεις
-        decade_score = 1.0 - min(dw_score * 10, 1.0)
+        freq_score   = (freq[n] - min_freq) / freq_range
+        gap_score    = gaps[n] / max_gap
+        decade       = (n - 1) // 10
+        decade_score = 1.0 - min(dw.get(decade, DRAW_SIZE / TOTAL_NUMBERS) * 10, 1.0)
 
         scores[n] = (
-            freq_weight * freq_score
-            + gap_weight * gap_score
+            freq_weight   * freq_score
+            + gap_weight  * gap_score
             + decade_weight * decade_score
+        )
+    return scores
+
+
+# ---------------------------------------------------------------------------
+# Score από OPAP statistics (occurrences, lastDraw, minGap, maxGap)
+# ---------------------------------------------------------------------------
+
+def score_from_statistics(
+    stats: dict[int, dict],
+    freq_weight: float = 0.35,
+    gap_weight: float = 0.40,
+    spread_weight: float = 0.25,
+) -> dict[int, float]:
+    """
+    Υπολογίζει scores από τα προ-επεξεργασμένα OPAP statistics.
+
+    stats format: { number: {occurrences, lastDraw, minGap, maxGap} }
+      - occurrences : συνολικές εμφανίσεις στο drawRange
+      - lastDraw    : κληρώσεις πριν από την τελευταία εμφάνιση (0 = εμφανίστηκε στην τελευταία)
+      - minGap      : ελάχιστο κενό μεταξύ εμφανίσεων
+      - maxGap      : μέγιστο κενό μεταξύ εμφανίσεων
+    """
+    occ     = {n: s["occurrences"] for n, s in stats.items()}
+    last_d  = {n: s["lastDraw"]    for n, s in stats.items()}
+    max_gap = {n: s["maxGap"]      for n, s in stats.items()}
+
+    max_occ    = max(occ.values())    or 1
+    min_occ    = min(occ.values())
+    occ_range  = max_occ - min_occ    or 1
+    max_last   = max(last_d.values()) or 1
+    max_maxgap = max(max_gap.values()) or 1
+
+    scores: dict[int, float] = {}
+    for n in range(1, TOTAL_NUMBERS + 1):
+        s = stats.get(n, {})
+        o  = s.get("occurrences", 0)
+        ld = s.get("lastDraw", max_last)
+        mg = s.get("maxGap", 0)
+
+        # Freq score: αριθμοί με πάνω από μέση συχνότητα παίρνουν bonus
+        freq_score = (o - min_occ) / occ_range
+
+        # Gap score: αριθμοί που δεν εμφανίστηκαν πρόσφατα = υψηλότερο score
+        gap_score = ld / max_last
+
+        # Spread score: αριθμοί με μεγάλο maxGap είναι πιο «ώριμοι» να εμφανιστούν
+        spread_score = mg / max_maxgap
+
+        scores[n] = (
+            freq_weight    * freq_score
+            + gap_weight   * gap_score
+            + spread_weight * spread_score
         )
 
     return scores
 
 
 # ---------------------------------------------------------------------------
-# Επιλογή αριθμών
+# Επιλογή αριθμών (weighted random)
 # ---------------------------------------------------------------------------
 
 def pick_numbers(
     scores: dict[int, float],
     n: int = 9,
-    randomness: float = 0.20,
+    randomness: float = 0.18,
     seed: int | None = None,
 ) -> list[int]:
-    """
-    Επιλέγει N αριθμούς βάσει scores με μικρό ποσοστό τυχαιότητας.
-
-    Args:
-        scores:     Score για κάθε αριθμό.
-        n:          Πόσους αριθμούς να επιλέξει.
-        randomness: 0=καθαρά deterministic, 1=καθαρά τυχαίο.
-        seed:       Για reproducibility.
-    """
+    """Επιλέγει N αριθμούς βάσει scores με μικρό τυχαίο θόρυβο."""
     rng = random.Random(seed)
+    noisy = {num: max(sc + rng.uniform(0, randomness), 0.001) for num, sc in scores.items()}
 
-    # Προσθέτουμε τυχαίο θόρυβο στα scores
-    noisy: dict[int, float] = {
-        num: score + rng.uniform(0, randomness)
-        for num, score in scores.items()
-    }
-
-    # Weighted random sample χωρίς επανάληψη
     numbers = list(noisy.keys())
-    weights = [max(noisy[num], 0.001) for num in numbers]
+    weights = [noisy[num] for num in numbers]
 
-    selected = []
-    remaining_numbers = numbers[:]
-    remaining_weights = weights[:]
+    selected: list[int] = []
+    rem_n = numbers[:]
+    rem_w = weights[:]
 
-    for _ in range(min(n, len(remaining_numbers))):
-        total = sum(remaining_weights)
+    for _ in range(min(n, len(rem_n))):
+        total = sum(rem_w)
         r = rng.uniform(0, total)
-        cumulative = 0
-        for i, w in enumerate(remaining_weights):
-            cumulative += w
-            if r <= cumulative:
-                selected.append(remaining_numbers[i])
-                remaining_numbers.pop(i)
-                remaining_weights.pop(i)
+        cumul = 0.0
+        for i, w in enumerate(rem_w):
+            cumul += w
+            if r <= cumul:
+                selected.append(rem_n.pop(i))
+                rem_w.pop(i)
                 break
 
     return sorted(selected)
 
 
 # ---------------------------------------------------------------------------
-# Fallback: Purely statistical (χωρίς ιστορικά δεδομένα)
+# Fallback: μαθηματική κατανομή (χωρίς δεδομένα)
 # ---------------------------------------------------------------------------
 
 def statistical_pick(n: int = 9, seed: int | None = None) -> list[int]:
-    """
-    Επιλογή βάσει μαθηματικής κατανομής όταν δεν υπάρχουν ιστορικά δεδομένα.
-    Χρησιμοποιεί balanced sampling: σε κάθε δεκάδα (1-80) προσπαθεί
-    να πάρει ~n/8 αριθμούς, με μικρή τυχαιότητα.
-    """
+    """Balanced sampling ανά δεκάδα όταν δεν υπάρχουν δεδομένα."""
     rng = random.Random(seed)
-    decades = list(range(8))  # 0..7 → 1-10, 11-20, ... 71-80
-
-    # Βάρη δεκάδων: ελαφρά προτίμηση στη μέση (20-60)
-    decade_weights_list = []
-    for d in decades:
+    decade_w = []
+    for d in range(8):
         mid = d * 10 + 5.5
-        weight = 1.0 - 0.3 * abs(mid - 40.5) / 40.5
-        decade_weights_list.append(weight)
+        decade_w.append(1.0 - 0.3 * abs(mid - 40.5) / 40.5)
 
-    picks = set()
+    picks: set[int] = set()
     attempts = 0
     while len(picks) < n and attempts < 1000:
         attempts += 1
-        # Επέλεξε δεκάδα
-        total_dw = sum(decade_weights_list)
-        r = rng.uniform(0, total_dw)
-        cumulative = 0
-        chosen_decade = 0
-        for d, w in enumerate(decade_weights_list):
-            cumulative += w
-            if r <= cumulative:
-                chosen_decade = d
+        total = sum(decade_w)
+        r = rng.uniform(0, total)
+        cumul, chosen = 0.0, 0
+        for d, w in enumerate(decade_w):
+            cumul += w
+            if r <= cumul:
+                chosen = d
                 break
-        # Επέλεξε αριθμό μέσα στη δεκάδα
-        lo = chosen_decade * 10 + 1
-        hi = lo + 9
-        candidate = rng.randint(lo, hi)
-        picks.add(candidate)
+        picks.add(rng.randint(chosen * 10 + 1, chosen * 10 + 10))
 
-    return sorted(picks)[:n]
+    return sorted(list(picks)[:n])
 
 
 # ---------------------------------------------------------------------------
-# Στατιστικά report
+# Report
 # ---------------------------------------------------------------------------
 
-def print_stats(draws: list[list[int]], scores: dict[int, float]) -> None:
-    """Εκτυπώνει σύνοψη στατιστικών."""
-    freq = frequency_map(draws)
-    gaps = gap_analysis(draws)
-    exp = expected_frequency(draws)
+def print_stats_from_api(stats: dict[int, dict]) -> None:
+    """Εκτυπώνει στατιστικά από OPAP API."""
+    hot   = sorted(stats.items(), key=lambda x: -x[1]["occurrences"])[:10]
+    cold  = sorted(stats.items(), key=lambda x:  x[1]["occurrences"])[:10]
+    overdue = sorted(stats.items(), key=lambda x: -x[1]["lastDraw"])[:10]
 
-    print(f"\n{'='*50}")
-    print(f"  ΣΤΑΤΙΣΤΙΚΑ KINO ({len(draws)} κληρώσεις)")
-    print(f"{'='*50}")
-    print(f"  Αναμενόμενη συχνότητα / αριθμό: {exp:.1f}")
-    print(f"\n  TOP 10 HOT  : {hot_numbers(freq, 10)}")
-    print(f"  TOP 10 COLD : {cold_numbers(freq, 10)}")
+    print(f"\n{'='*54}")
+    print(f"  ΣΤΑΤΙΣΤΙΚΑ KINO (OPAP API)")
+    print(f"{'='*54}")
+    print(f"  TOP 10 HOT     : {[n for n, _ in hot]}")
+    print(f"  TOP 10 COLD    : {[n for n, _ in cold]}")
+    print(f"  TOP 10 OVERDUE : {[n for n, _ in overdue]}")
+    print(f"{'='*54}\n")
 
-    # Top 5 οφειλόμενοι
-    overdue = sorted(gaps.items(), key=lambda x: -x[1])[:5]
-    print(f"  TOP 5 OVERDUE: {[n for n, _ in overdue]}")
-    print(f"{'='*50}\n")
+
+def print_stats_from_draws(draws: list[list[int]]) -> None:
+    """Εκτυπώνει στατιστικά από raw draws."""
+    freq  = frequency_map(draws)
+    gaps  = gap_analysis(draws)
+    exp   = len(draws) * DRAW_SIZE / TOTAL_NUMBERS
+
+    hot     = sorted(freq.items(), key=lambda x: -x[1])[:10]
+    cold    = sorted(freq.items(), key=lambda x:  x[1])[:10]
+    overdue = sorted(gaps.items(), key=lambda x: -x[1])[:10]
+
+    print(f"\n{'='*54}")
+    print(f"  ΣΤΑΤΙΣΤΙΚΑ KINO ({len(draws)} raw κληρώσεις)")
+    print(f"  Αναμενόμενη συχνότητα/αριθμό: {exp:.1f}")
+    print(f"{'='*54}")
+    print(f"  TOP 10 HOT     : {[n for n, _ in hot]}")
+    print(f"  TOP 10 COLD    : {[n for n, _ in cold]}")
+    print(f"  TOP 10 OVERDUE : {[n for n, _ in overdue]}")
+    print(f"{'='*54}\n")
