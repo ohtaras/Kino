@@ -311,12 +311,11 @@ function normalize(map) {
   return out;
 }
 
-function weightedSample(scores, n, noise = 0.18) {
+function weightedSample(scores, n, noise = 0.12) {
   const nums    = Object.keys(scores).map(Number);
   const weights = nums.map(k => Math.max(scores[k] + Math.random() * noise, 0.001));
   const selected = [];
   const remN = [...nums], remW = [...weights];
-
   for (let i = 0; i < Math.min(n, remN.length); i++) {
     const total = remW.reduce((a, b) => a + b, 0);
     let r = Math.random() * total, cum = 0, idx = 0;
@@ -332,7 +331,6 @@ function weightedSample(scores, n, noise = 0.18) {
 
 /* ── OPAP Draws API ── */
 async function fetchDraws() {
-  // Try descending limits until one works
   for (const limit of [100, 50, 20, 10]) {
     const res = await fetch(`${DRAWS_API}/last/${limit}`);
     if (res.ok) {
@@ -347,6 +345,63 @@ function parseNumbers(draw) {
   const wn = draw.winningNumbers || {};
   const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
   return list.length === 20 ? list.map(Number) : null;
+}
+
+/* ── Markov Chain Engine ── */
+
+// P(n in draw[i+1] | m in draw[i]) — transition matrix
+function buildTransitionMatrix(draws) {
+  const matrix = {};
+  for (let i = 0; i < draws.length - 1; i++) {
+    const cur  = draws[i];
+    const next = draws[i + 1];
+    cur.forEach(m => {
+      if (!matrix[m]) matrix[m] = {};
+      next.forEach(n => { matrix[m][n] = (matrix[m][n] || 0) + 1; });
+    });
+  }
+  return matrix;
+}
+
+// Numbers that tend to appear together in the same draw
+function buildCooccurrence(draws) {
+  const cooc = {};
+  draws.forEach(draw => {
+    draw.forEach(m => {
+      if (!cooc[m]) cooc[m] = {};
+      draw.forEach(n => {
+        if (m !== n) cooc[m][n] = (cooc[m][n] || 0) + 1;
+      });
+    });
+  });
+  return cooc;
+}
+
+// Lag-2: P(n | draw[i-2])
+function buildLagMatrix(draws, lag = 2) {
+  const matrix = {};
+  for (let i = 0; i < draws.length - lag; i++) {
+    const past = draws[i];
+    const fut  = draws[i + lag];
+    past.forEach(m => {
+      if (!matrix[m]) matrix[m] = {};
+      fut.forEach(n => { matrix[m][n] = (matrix[m][n] || 0) + 1; });
+    });
+  }
+  return matrix;
+}
+
+function scoreFromMatrix(matrix, contextDraw) {
+  const scores = {};
+  for (let n = 1; n <= 80; n++) scores[n] = 0;
+  contextDraw.forEach(m => {
+    if (matrix[m]) {
+      for (let n = 1; n <= 80; n++) {
+        scores[n] += matrix[m][n] || 0;
+      }
+    }
+  });
+  return scores;
 }
 
 function analyzeDraws(draws) {
@@ -378,16 +433,39 @@ async function predict() {
     const draws = raw.map(parseNumbers).filter(Boolean);
     if (draws.length < 10) throw new Error(`Μόνο ${draws.length} έγκυρες κληρώσεις`);
 
+    // draws[0] = most recent completed draw (context for prediction)
+    const lastDraw  = draws[0];
+    const prev2Draw = draws[1] || draws[0];
+
+    // Build Markov matrices
+    const trans = buildTransitionMatrix(draws);
+    const cooc  = buildCooccurrence(draws);
+    const lag2  = buildLagMatrix(draws, 2);
+
+    // Score from each signal
+    const sT  = normalize(scoreFromMatrix(trans, lastDraw));   // transition from last draw
+    const sC  = normalize(scoreFromMatrix(cooc,  lastDraw));   // co-occurrence with last draw
+    const sL  = normalize(scoreFromMatrix(lag2,  prev2Draw));  // lag-2 from 2 draws ago
     const { freq, gap, hot, cold, overdue } = analyzeDraws(draws);
-    const nFreq = normalize(freq), nGap = normalize(gap);
+    const sF  = normalize(freq);
+    const sG  = normalize(gap);
+
+    // Combined weighted score
+    // Transition (Markov) gets most weight; co-occ & lag add correlation signal
     const scores = {};
     for (let n = 1; n <= 80; n++) {
-      scores[n] = 0.40 * nFreq[n] + 0.60 * nGap[n];
+      scores[n] =
+        0.35 * (sT[n]  || 0) +   // Markov transition
+        0.20 * (sC[n]  || 0) +   // co-occurrence
+        0.15 * (sL[n]  || 0) +   // lag-2
+        0.15 * (sF[n]  || 0) +   // frequency
+        0.15 * (sG[n]  || 0);    // gap/overdue
     }
+
     const numbers = weightedSample(scores, count);
     renderStats(hot, cold, overdue);
     renderBalls(numbers);
-    badgeText.textContent = `OPAP API · ${draws.length} κληρώσεις · ${new Date().toLocaleString("el-GR")}`;
+    badgeText.textContent = `Markov · ${draws.length} κληρώσεις · ${new Date().toLocaleString("el-GR")}`;
     badge.style.display = "inline-flex";
 
   } catch (err) {
