@@ -238,7 +238,7 @@
 
 <script>
 const GAME_ID   = 1100;
-const STATS_API = `https://api.opap.gr/games/v1.0/${GAME_ID}/statistics`;
+const DRAWS_API = `https://api.opap.gr/draws/v3.0/${GAME_ID}`;
 
 let count = 9;
 const countDisp  = document.getElementById("count-disp");
@@ -330,20 +330,33 @@ function weightedSample(scores, n, noise = 0.18) {
   return selected.sort((a, b) => a - b);
 }
 
-/* ── OPAP Statistics API ── */
-async function fetchStatistics() {
-  const candidates = [1801, 1000, 500, 200, 100, 50];
-  let lastErr = null;
-  for (const dr of candidates) {
-    const res = await fetch(`${STATS_API}?drawRange=${dr}`);
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : (data.statistics || data.numberStatistics || data.content || []);
-      if (list.length >= 70) return { list, drawRange: dr };
-    }
-    lastErr = `HTTP ${res.status} (drawRange=${dr})`;
-  }
-  throw new Error(lastErr || "Δεν βρέθηκε έγκυρο drawRange");
+/* ── OPAP Draws API ── */
+async function fetchDraws(limit = 300) {
+  const res = await fetch(`${DRAWS_API}/last/${limit}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.content || []);
+}
+
+function parseNumbers(draw) {
+  const wn = draw.winningNumbers || {};
+  const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
+  return list.length === 20 ? list.map(Number) : null;
+}
+
+function analyzeDraws(draws) {
+  const freq = {}, lastSeen = {};
+  for (let n = 1; n <= 80; n++) freq[n] = 0;
+  draws.forEach((d, idx) => d.forEach(n => {
+    freq[n]++;
+    if (!(n in lastSeen)) lastSeen[n] = idx;
+  }));
+  const gap = {};
+  for (let n = 1; n <= 80; n++) gap[n] = n in lastSeen ? lastSeen[n] : draws.length;
+  const hot     = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,10).map(([n])=>+n);
+  const cold    = Object.entries(freq).sort((a,b) => a[1]-b[1]).slice(0,10).map(([n])=>+n);
+  const overdue = Object.entries(gap).sort((a,b) => b[1]-a[1]).slice(0,10).map(([n])=>+n);
+  return { freq, gap, hot, cold, overdue };
 }
 
 /* ── Main prediction logic ── */
@@ -356,31 +369,20 @@ async function predict() {
   statsCard.style.display = "none";
 
   try {
-    const { list: stats, drawRange } = await fetchStatistics();
+    const raw   = await fetchDraws(300);
+    const draws = raw.map(parseNumbers).filter(Boolean);
+    if (draws.length < 10) throw new Error(`Μόνο ${draws.length} έγκυρες κληρώσεις`);
 
-    const occ = {}, lastD = {}, maxG = {};
-    stats.forEach(s => {
-      const n = s.number ?? s.num;
-      occ[n]   = s.occurrences ?? 0;
-      lastD[n] = s.lastDraw    ?? 0;
-      maxG[n]  = s.maxGap      ?? 0;
-    });
-    const nOcc = normalize(occ), nLastD = normalize(lastD), nMaxG = normalize(maxG);
+    const { freq, gap, hot, cold, overdue } = analyzeDraws(draws);
+    const nFreq = normalize(freq), nGap = normalize(gap);
     const scores = {};
     for (let n = 1; n <= 80; n++) {
-      scores[n] = 0.35 * (nOcc[n] ?? 0)
-                + 0.40 * (nLastD[n] ?? 0)
-                + 0.25 * (nMaxG[n] ?? 0);
+      scores[n] = 0.40 * nFreq[n] + 0.60 * nGap[n];
     }
     const numbers = weightedSample(scores, count);
-
-    const hot     = [...stats].sort((a,b) => b.occurrences - a.occurrences).slice(0,10).map(s => s.number ?? s.num);
-    const cold    = [...stats].sort((a,b) => a.occurrences - b.occurrences).slice(0,10).map(s => s.number ?? s.num);
-    const overdue = [...stats].sort((a,b) => b.lastDraw - a.lastDraw).slice(0,10).map(s => s.number ?? s.num);
     renderStats(hot, cold, overdue);
-
     renderBalls(numbers);
-    badgeText.textContent = `OPAP Statistics API (${drawRange} κληρώσεις) · ${new Date().toLocaleString("el-GR")}`;
+    badgeText.textContent = `OPAP API · ${draws.length} κληρώσεις · ${new Date().toLocaleString("el-GR")}`;
     badge.style.display = "inline-flex";
 
   } catch (err) {
