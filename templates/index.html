@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kino Predictor — Allwyn</title>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --card:    #161b22;
+      --border:  #30363d;
+      --accent:  #f0a500;
+      --accent2: #e05c00;
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --green:   #3fb950;
+      --red:     #f85149;
+      --blue:    #58a6ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, #1a0a00 0%, #2a1200 50%, #1a0a00 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 24px 16px 20px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(240,165,0,0.4);
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Main container ── */
+    main {
+      width: 100%;
+      max-width: 720px;
+      padding: 32px 16px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .count-control {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .count-btn {
+      background: #21262d;
+      border: none;
+      color: var(--text);
+      font-size: 1.2rem;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .count-btn:hover { background: #30363d; }
+    .count-display {
+      background: #0d1117;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1.1rem;
+      width: 44px;
+      text-align: center;
+      height: 36px;
+      line-height: 36px;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .predict-btn {
+      flex: 1;
+      min-width: 160px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #000;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      text-transform: uppercase;
+    }
+    .predict-btn:hover  { opacity: 0.9; }
+    .predict-btn:active { transform: scale(0.97); }
+    .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Numbers grid ── */
+    .numbers-section { text-align: center; }
+    .numbers-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin: 8px 0 20px;
+      min-height: 72px;
+      align-items: center;
+    }
+    .num-ball {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      position: relative;
+      cursor: default;
+      animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-30deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+    /* Colour by range */
+    .ball-1-20  { background: radial-gradient(circle at 35% 35%, #ff9f43, #e05c00); color: #fff; box-shadow: 0 4px 16px rgba(224,92,0,0.4); }
+    .ball-21-40 { background: radial-gradient(circle at 35% 35%, #ffd32a, #f0a500); color: #000; box-shadow: 0 4px 16px rgba(240,165,0,0.4); }
+    .ball-41-60 { background: radial-gradient(circle at 35% 35%, #67e8f9, #0ea5e9); color: #000; box-shadow: 0 4px 16px rgba(14,165,233,0.4); }
+    .ball-61-80 { background: radial-gradient(circle at 35% 35%, #a78bfa, #7c3aed); color: #fff; box-shadow: 0 4px 16px rgba(124,58,237,0.4); }
+
+    .numbers-row {
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    .numbers-row span { color: var(--accent); font-weight: 700; }
+
+    /* ── Method badge ── */
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #21262d;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 14px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    /* ── Stats ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+    }
+    .stat-group h3 {
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .hot-title   { color: var(--red); }
+    .cold-title  { color: var(--blue); }
+    .over-title  { color: #f59e0b; }
+
+    .mini-balls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .mini-ball {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 16px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    footer {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-align: center;
+      padding: 0 16px 24px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>KINO PREDICTOR</h1>
+  <p>Allwyn.gr &mdash; Στατιστική Ανάλυση</p>
+</header>
+
+<main>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="card-title">Ρυθμίσεις Πρόβλεψης</div>
+    <div class="controls">
+      <span class="label">Αριθμοί:</span>
+      <div class="count-control">
+        <button class="count-btn" id="btn-minus">−</button>
+        <div class="count-display" id="count-display">9</div>
+        <button class="count-btn" id="btn-plus">+</button>
+      </div>
+      <button class="predict-btn" id="predict-btn">Κάνε Πρόβλεψη</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card numbers-section" id="result-card">
+    <div class="card-title">Επόμενη Κλήρωση</div>
+    <div class="numbers-grid" id="numbers-grid">
+      <span style="color:var(--muted);font-size:0.9rem;">Πάτησε «Κάνε Πρόβλεψη» για να δεις τους αριθμούς</span>
+    </div>
+    <div id="numbers-row" class="numbers-row"></div>
+    <div id="method-badge" style="display:none" class="method-badge">
+      <span class="dot"></span>
+      <span id="method-text"></span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card" id="stats-card" style="display:none">
+    <div class="card-title">Στατιστικά (1801 κληρώσεις)</div>
+    <div class="stats-grid" id="stats-grid"></div>
+  </div>
+
+</main>
+
+<footer>
+  Το Kino είναι τυχαίο παιχνίδι &mdash; καμία εγγύηση αποτελέσματος.
+</footer>
+
+<script>
+  let count = 9;
+
+  const countDisplay = document.getElementById("count-display");
+  const btnMinus     = document.getElementById("btn-minus");
+  const btnPlus      = document.getElementById("btn-plus");
+  const predictBtn   = document.getElementById("predict-btn");
+  const numbersGrid  = document.getElementById("numbers-grid");
+  const numbersRow   = document.getElementById("numbers-row");
+  const methodBadge  = document.getElementById("method-badge");
+  const methodText   = document.getElementById("method-text");
+  const statsCard    = document.getElementById("stats-card");
+  const statsGrid    = document.getElementById("stats-grid");
+
+  btnMinus.addEventListener("click", () => { if (count > 1)  { count--; countDisplay.textContent = count; } });
+  btnPlus.addEventListener("click",  () => { if (count < 20) { count++; countDisplay.textContent = count; } });
+
+  function ballClass(n) {
+    if (n <= 20) return "ball-1-20";
+    if (n <= 40) return "ball-21-40";
+    if (n <= 60) return "ball-41-60";
+    return "ball-61-80";
+  }
+
+  function renderNumbers(numbers) {
+    numbersGrid.innerHTML = "";
+    numbers.forEach((n, i) => {
+      const ball = document.createElement("div");
+      ball.className = `num-ball ${ballClass(n)}`;
+      ball.textContent = n;
+      ball.style.animationDelay = `${i * 80}ms`;
+      numbersGrid.appendChild(ball);
+    });
+    numbersRow.innerHTML = `<span>${numbers.join(" — ")}</span>`;
+  }
+
+  function renderStats(stats) {
+    if (!stats || (!stats.hot && !stats.cold && !stats.overdue)) {
+      statsCard.style.display = "none";
+      return;
+    }
+    statsCard.style.display = "";
+    const groups = [
+      { key: "hot",     label: "Hot",     cls: "hot-title",  ballCls: "ball-1-20"  },
+      { key: "cold",    label: "Cold",    cls: "cold-title", ballCls: "ball-41-60" },
+      { key: "overdue", label: "Overdue", cls: "over-title", ballCls: "ball-21-40" },
+    ];
+    statsGrid.innerHTML = "";
+    groups.forEach(g => {
+      const nums = stats[g.key] || [];
+      if (!nums.length) return;
+      const div = document.createElement("div");
+      div.className = "stat-group";
+      div.innerHTML = `<h3 class="${g.cls}">${g.label}</h3><div class="mini-balls"></div>`;
+      const mb = div.querySelector(".mini-balls");
+      nums.forEach(n => {
+        const b = document.createElement("div");
+        b.className = `mini-ball ${ballClass(n)}`;
+        b.textContent = n;
+        mb.appendChild(b);
+      });
+      statsGrid.appendChild(div);
+    });
+  }
+
+  async function predict() {
+    predictBtn.disabled = true;
+    predictBtn.textContent = "Υπολογισμός…";
+    numbersGrid.innerHTML = '<div class="spinner"></div>';
+    numbersRow.innerHTML = "";
+    methodBadge.style.display = "none";
+    statsCard.style.display = "none";
+
+    try {
+      const res = await fetch(`/api/predict?count=${count}`);
+      const data = await res.json();
+
+      renderNumbers(data.numbers);
+      renderStats(data.stats);
+
+      methodText.textContent = `${data.method} · ${data.timestamp}`;
+      methodBadge.style.display = "inline-flex";
+    } catch (err) {
+      numbersGrid.innerHTML = `<span style="color:var(--red)">Σφάλμα σύνδεσης. Δοκίμασε ξανά.</span>`;
+    } finally {
+      predictBtn.disabled = false;
+      predictBtn.textContent = "Κάνε Πρόβλεψη";
+    }
+  }
+
+  predictBtn.addEventListener("click", predict);
+</script>
+
+</body>
+</html>
