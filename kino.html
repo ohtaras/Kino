@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kino Predictor — Allwyn</title>
+  <style>
+    :root {
+      --bg:     #0d1117;
+      --card:   #161b22;
+      --border: #30363d;
+      --accent: #f0a500;
+      --accent2:#e05c00;
+      --text:   #e6edf3;
+      --muted:  #8b949e;
+      --green:  #3fb950;
+      --red:    #f85149;
+      --blue:   #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      width: 100%;
+      background: linear-gradient(135deg,#1a0a00,#2a1200,#1a0a00);
+      border-bottom: 2px solid var(--accent);
+      padding: 24px 16px 20px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(240,165,0,.4);
+    }
+    header p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+
+    main {
+      width: 100%;
+      max-width: 720px;
+      padding: 32px 16px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .card-title {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* Controls */
+    .controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .label { font-size: .9rem; color: var(--muted); white-space: nowrap; }
+    .count-control {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .count-btn {
+      background: #21262d;
+      border: none;
+      color: var(--text);
+      font-size: 1.2rem;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      transition: background .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .count-btn:hover { background: #30363d; }
+    .count-display {
+      background: #0d1117;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1.1rem;
+      width: 44px;
+      text-align: center;
+      line-height: 36px;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .predict-btn {
+      flex: 1;
+      min-width: 160px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #000;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      text-transform: uppercase;
+    }
+    .predict-btn:hover  { opacity: .9; }
+    .predict-btn:active { transform: scale(.97); }
+    .predict-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Balls */
+    .numbers-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      min-height: 70px;
+      align-items: center;
+      margin: 6px 0 16px;
+    }
+    .num-ball {
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      animation: popIn .35s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-30deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+    .b1  { background: radial-gradient(circle at 35% 35%,#ff9f43,#e05c00); color:#fff; box-shadow:0 4px 16px rgba(224,92,0,.4); }
+    .b2  { background: radial-gradient(circle at 35% 35%,#ffd32a,#f0a500); color:#000; box-shadow:0 4px 16px rgba(240,165,0,.4); }
+    .b3  { background: radial-gradient(circle at 35% 35%,#67e8f9,#0ea5e9); color:#000; box-shadow:0 4px 16px rgba(14,165,233,.4); }
+    .b4  { background: radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed); color:#fff; box-shadow:0 4px 16px rgba(124,58,237,.4); }
+
+    .numbers-row { text-align:center; color:var(--muted); font-size:.85rem; letter-spacing:1px; }
+    .numbers-row span { color:var(--accent); font-weight:700; }
+
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #21262d;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    .dot { width:7px;height:7px;border-radius:50%;background:var(--green); }
+
+    /* Stats */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
+    .stat-group h3 { font-size:.7rem; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; }
+    .hot-t  { color:var(--red); }
+    .cold-t { color:var(--blue); }
+    .over-t { color:#f59e0b; }
+    .mini-balls { display:flex; flex-wrap:wrap; gap:6px; }
+    .mini-ball {
+      width:30px;height:30px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.72rem;font-weight:700;
+    }
+
+    /* Spinner */
+    .spinner {
+      width:40px;height:40px;
+      border:3px solid var(--border);
+      border-top-color:var(--accent);
+      border-radius:50%;
+      animation:spin .7s linear infinite;
+      margin:16px auto;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    footer {
+      color:var(--muted);
+      font-size:.72rem;
+      text-align:center;
+      padding:0 16px 24px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>KINO PREDICTOR</h1>
+  <p>Allwyn.gr &mdash; Στατιστική Ανάλυση</p>
+</header>
+
+<main>
+
+  <div class="card">
+    <div class="card-title">Ρυθμίσεις Πρόβλεψης</div>
+    <div class="controls">
+      <span class="label">Αριθμοί:</span>
+      <div class="count-control">
+        <button class="count-btn" id="btn-minus">−</button>
+        <div class="count-display" id="count-disp">9</div>
+        <button class="count-btn" id="btn-plus">+</button>
+      </div>
+      <button class="predict-btn" id="predict-btn">Κάνε Πρόβλεψη</button>
+    </div>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <div class="card-title">Επόμενη Κλήρωση</div>
+    <div class="numbers-grid" id="numbers-grid">
+      <span style="color:var(--muted);font-size:.9rem">Πάτησε «Κάνε Πρόβλεψη»</span>
+    </div>
+    <div id="numbers-row" class="numbers-row"></div>
+    <div id="badge" class="method-badge" style="display:none">
+      <span class="dot"></span><span id="badge-text"></span>
+    </div>
+  </div>
+
+  <div class="card" id="stats-card" style="display:none">
+    <div class="card-title">Στατιστικά OPAP (1801 κληρώσεις)</div>
+    <div class="stats-grid" id="stats-grid"></div>
+  </div>
+
+</main>
+
+<footer>
+  Το Kino είναι τυχαίο παιχνίδι &mdash; καμία εγγύηση αποτελέσματος.
+</footer>
+
+<script>
+const GAME_ID   = 1100;
+const DRAWS_API = `https://api.opap.gr/draws/v3.0/${GAME_ID}`;
+const STATS_API = `https://api.opap.gr/games/v1.0/${GAME_ID}/statistics`;
+
+let count = 9;
+const countDisp  = document.getElementById("count-disp");
+const btnMinus   = document.getElementById("btn-minus");
+const btnPlus    = document.getElementById("btn-plus");
+const predictBtn = document.getElementById("predict-btn");
+const grid       = document.getElementById("numbers-grid");
+const row        = document.getElementById("numbers-row");
+const badge      = document.getElementById("badge");
+const badgeText  = document.getElementById("badge-text");
+const statsCard  = document.getElementById("stats-card");
+const statsGrid  = document.getElementById("stats-grid");
+
+btnMinus.onclick = () => { if (count > 1)  { count--; countDisp.textContent = count; } };
+btnPlus.onclick  = () => { if (count < 20) { count++; countDisp.textContent = count; } };
+
+/* ── Ball colour by range ── */
+function ballCls(n) {
+  if (n <= 20) return "b1";
+  if (n <= 40) return "b2";
+  if (n <= 60) return "b3";
+  return "b4";
+}
+
+/* ── Render balls ── */
+function renderBalls(nums) {
+  grid.innerHTML = "";
+  nums.forEach((n, i) => {
+    const b = document.createElement("div");
+    b.className = `num-ball ${ballCls(n)}`;
+    b.textContent = n;
+    b.style.animationDelay = `${i * 80}ms`;
+    grid.appendChild(b);
+  });
+  row.innerHTML = `<span>${nums.join(" — ")}</span>`;
+}
+
+/* ── Render stats ── */
+function renderStats(hot, cold, overdue) {
+  const groups = [
+    { label:"Hot",     cls:"hot-t",  data: hot },
+    { label:"Cold",    cls:"cold-t", data: cold },
+    { label:"Overdue", cls:"over-t", data: overdue },
+  ];
+  statsGrid.innerHTML = "";
+  groups.forEach(g => {
+    if (!g.data || !g.data.length) return;
+    const d = document.createElement("div");
+    d.className = "stat-group";
+    d.innerHTML = `<h3 class="${g.cls}">${g.label}</h3><div class="mini-balls"></div>`;
+    const mb = d.querySelector(".mini-balls");
+    g.data.forEach(n => {
+      const b = document.createElement("div");
+      b.className = `mini-ball ${ballCls(n)}`;
+      b.textContent = n;
+      mb.appendChild(b);
+    });
+    statsGrid.appendChild(d);
+  });
+  statsCard.style.display = "";
+}
+
+/* ── Scoring helpers ── */
+function normalize(map) {
+  const vals = Object.values(map);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const rng = mx - mn || 1;
+  const out = {};
+  for (const [k, v] of Object.entries(map)) out[+k] = (v - mn) / rng;
+  return out;
+}
+
+function weightedSample(scores, n, noise = 0.18) {
+  const nums    = Object.keys(scores).map(Number);
+  const weights = nums.map(k => Math.max(scores[k] + Math.random() * noise, 0.001));
+  const selected = [];
+  const remN = [...nums], remW = [...weights];
+
+  for (let i = 0; i < Math.min(n, remN.length); i++) {
+    const total = remW.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, cum = 0, idx = 0;
+    for (let j = 0; j < remW.length; j++) {
+      cum += remW[j];
+      if (r <= cum) { idx = j; break; }
+    }
+    selected.push(remN.splice(idx, 1)[0]);
+    remW.splice(idx, 1);
+  }
+  return selected.sort((a, b) => a - b);
+}
+
+/* ── Fallback: mathematical distribution ── */
+function mathPick(n) {
+  const picks = new Set();
+  while (picks.size < n) {
+    // Slightly favour middle range
+    const raw = Math.floor(Math.random() * 80) + 1;
+    const mid  = 40.5;
+    const bias = 1 - 0.3 * Math.abs(raw - mid) / mid;
+    if (Math.random() < bias) picks.add(raw);
+  }
+  return [...picks].sort((a, b) => a - b);
+}
+
+/* ── OPAP Statistics API ── */
+async function fetchStatistics(drawRange = 1801) {
+  const res = await fetch(`${STATS_API}?drawRange=${drawRange}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.statistics || data.numberStatistics || data.content || []);
+}
+
+async function fetchLastDraws(limit = 200) {
+  const res = await fetch(`${DRAWS_API}/last/${limit}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.content || []);
+}
+
+function parseDrawNumbers(draw) {
+  const wn   = draw.winningNumbers || {};
+  const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
+  if (list.length === 20) return list.map(Number);
+  return null;
+}
+
+/* ── Main prediction logic ── */
+async function predict() {
+  predictBtn.disabled = true;
+  predictBtn.textContent = "Υπολογισμός…";
+  grid.innerHTML = '<div class="spinner"></div>';
+  row.innerHTML = "";
+  badge.style.display = "none";
+  statsCard.style.display = "none";
+
+  try {
+    let numbers, method;
+
+    /* Strategy 1: OPAP Statistics */
+    try {
+      const stats = await fetchStatistics(1801);
+      if (stats.length >= 70) {
+        const occ    = {}, lastD = {}, maxG = {};
+        stats.forEach(s => {
+          const n = s.number ?? s.num;
+          occ[n]   = s.occurrences ?? 0;
+          lastD[n] = s.lastDraw    ?? 0;
+          maxG[n]  = s.maxGap      ?? 0;
+        });
+        const nOcc = normalize(occ), nLastD = normalize(lastD), nMaxG = normalize(maxG);
+        const scores = {};
+        for (let n = 1; n <= 80; n++) {
+          scores[n] = 0.35 * (nOcc[n]   ?? 0)
+                    + 0.40 * (nLastD[n]  ?? 0)
+                    + 0.25 * (nMaxG[n]   ?? 0);
+        }
+        numbers = weightedSample(scores, count);
+        method  = "OPAP Statistics API (1801 κληρώσεις)";
+
+        // Stats display
+        const hot     = [...stats].sort((a,b) => b.occurrences - a.occurrences).slice(0,10).map(s => s.number ?? s.num);
+        const cold    = [...stats].sort((a,b) => a.occurrences - b.occurrences).slice(0,10).map(s => s.number ?? s.num);
+        const overdue = [...stats].sort((a,b) => b.lastDraw - a.lastDraw).slice(0,10).map(s => s.number ?? s.num);
+        renderStats(hot, cold, overdue);
+      }
+    } catch (_) { /* fall through */ }
+
+    /* Strategy 2: Raw draws */
+    if (!numbers) {
+      try {
+        const raw = await fetchLastDraws(200);
+        const draws = raw.map(parseDrawNumbers).filter(Boolean);
+        if (draws.length >= 10) {
+          const freq = {}, gaps = {};
+          for (let n = 1; n <= 80; n++) { freq[n] = 0; }
+          draws.forEach(d => d.forEach(n => freq[n]++));
+          // Gap: index of last appearance (draws[0] = most recent)
+          for (let n = 1; n <= 80; n++) {
+            const idx = draws.findIndex(d => d.includes(n));
+            gaps[n] = idx === -1 ? draws.length : idx;
+          }
+          const nFreq = normalize(freq), nGap = normalize(gaps);
+          const scores = {};
+          for (let n = 1; n <= 80; n++) scores[n] = 0.4 * nFreq[n] + 0.6 * nGap[n];
+          numbers = weightedSample(scores, count);
+          method  = `Raw draws (${draws.length} κληρώσεις)`;
+        }
+      } catch (_) { /* fall through */ }
+    }
+
+    /* Strategy 3: Fallback */
+    if (!numbers) {
+      numbers = mathPick(count);
+      method  = "Μαθηματική κατανομή";
+    }
+
+    renderBalls(numbers);
+    badgeText.textContent = `${method} · ${new Date().toLocaleString("el-GR")}`;
+    badge.style.display = "inline-flex";
+
+  } catch (err) {
+    grid.innerHTML = `<span style="color:var(--red)">Σφάλμα: ${err.message}</span>`;
+  } finally {
+    predictBtn.disabled = false;
+    predictBtn.textContent = "Κάνε Πρόβλεψη";
+  }
+}
+
+predictBtn.addEventListener("click", predict);
+</script>
+
+</body>
+</html>
