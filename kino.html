@@ -331,11 +331,16 @@ function weightedSample(scores, n, noise = 0.18) {
 }
 
 /* ── OPAP Draws API ── */
-async function fetchDraws(limit = 300) {
-  const res = await fetch(`${DRAWS_API}/last/${limit}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.content || []);
+async function fetchDraws() {
+  // Try descending limits until one works
+  for (const limit of [100, 50, 20, 10]) {
+    const res = await fetch(`${DRAWS_API}/last/${limit}`);
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.content || []);
+    }
+  }
+  throw new Error("Δεν ήταν δυνατή η φόρτωση κληρώσεων");
 }
 
 function parseNumbers(draw) {
@@ -369,7 +374,7 @@ async function predict() {
   statsCard.style.display = "none";
 
   try {
-    const raw   = await fetchDraws(300);
+    const raw   = await fetchDraws();
     const draws = raw.map(parseNumbers).filter(Boolean);
     if (draws.length < 10) throw new Error(`Μόνο ${draws.length} έγκυρες κληρώσεις`);
 
