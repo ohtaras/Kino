@@ -6,256 +6,289 @@
   <title>Kino Predictor — Allwyn</title>
   <style>
     :root {
-      --bg:     #0d1117;
-      --card:   #161b22;
-      --border: #30363d;
-      --accent: #f0a500;
-      --accent2:#e05c00;
-      --text:   #e6edf3;
-      --muted:  #8b949e;
-      --green:  #3fb950;
-      --red:    #f85149;
-      --blue:   #58a6ff;
+      --bg:#0d1117; --card:#161b22; --border:#30363d;
+      --accent:#f0a500; --accent2:#e05c00;
+      --text:#e6edf3; --muted:#8b949e;
+      --green:#3fb950; --red:#f85149; --blue:#58a6ff;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    header {
-      width: 100%;
-      background: linear-gradient(135deg,#1a0a00,#2a1200,#1a0a00);
-      border-bottom: 2px solid var(--accent);
-      padding: 24px 16px 20px;
-      text-align: center;
-    }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: var(--accent);
-      text-shadow: 0 0 20px rgba(240,165,0,.4);
-    }
-    header p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;}
 
-    main {
-      width: 100%;
-      max-width: 720px;
-      padding: 32px 16px 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 24px;
-    }
-    .card-title {
-      font-size: .72rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
+    header{width:100%;background:linear-gradient(135deg,#1a0a00,#2a1200,#1a0a00);
+      border-bottom:2px solid var(--accent);padding:22px 16px 18px;text-align:center;}
+    header h1{font-size:2rem;font-weight:800;letter-spacing:2px;color:var(--accent);
+      text-shadow:0 0 20px rgba(240,165,0,.4);}
+    header p{color:var(--muted);font-size:.85rem;margin-top:4px;}
 
-    /* Controls */
-    .controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .label { font-size: .9rem; color: var(--muted); white-space: nowrap; }
-    .count-control {
-      display: flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .count-btn {
-      background: #21262d;
-      border: none;
-      color: var(--text);
-      font-size: 1.2rem;
-      width: 36px; height: 36px;
-      cursor: pointer;
-      transition: background .15s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .count-btn:hover { background: #30363d; }
-    .count-display {
-      background: #0d1117;
-      color: var(--accent);
-      font-weight: 700;
-      font-size: 1.1rem;
-      width: 44px;
-      text-align: center;
-      line-height: 36px;
-      border-left: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-    }
-    .predict-btn {
-      flex: 1;
-      min-width: 160px;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      color: #000;
-      font-weight: 800;
-      font-size: 1rem;
-      letter-spacing: 1px;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 24px;
-      cursor: pointer;
-      transition: opacity .2s, transform .1s;
-      text-transform: uppercase;
-    }
-    .predict-btn:hover  { opacity: .9; }
-    .predict-btn:active { transform: scale(.97); }
-    .predict-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .tab-bar{width:100%;max-width:760px;display:flex;border-bottom:2px solid var(--border);
+      padding:0 16px;margin-top:14px;}
+    .tab-btn{background:none;border:none;color:var(--muted);font-size:.88rem;font-weight:600;
+      padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;
+      transition:color .15s,border-color .15s;letter-spacing:.5px;}
+    .tab-btn:hover{color:var(--text);}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-    /* Balls */
-    .numbers-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      min-height: 70px;
-      align-items: center;
-      margin: 6px 0 16px;
-    }
-    .num-ball {
-      width: 58px; height: 58px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.25rem;
-      font-weight: 800;
-      animation: popIn .35s cubic-bezier(.175,.885,.32,1.275) both;
-    }
-    @keyframes popIn {
-      from { transform: scale(0) rotate(-30deg); opacity: 0; }
-      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
-    }
-    .b1  { background: radial-gradient(circle at 35% 35%,#ff9f43,#e05c00); color:#fff; box-shadow:0 4px 16px rgba(224,92,0,.4); }
-    .b2  { background: radial-gradient(circle at 35% 35%,#ffd32a,#f0a500); color:#000; box-shadow:0 4px 16px rgba(240,165,0,.4); }
-    .b3  { background: radial-gradient(circle at 35% 35%,#67e8f9,#0ea5e9); color:#000; box-shadow:0 4px 16px rgba(14,165,233,.4); }
-    .b4  { background: radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed); color:#fff; box-shadow:0 4px 16px rgba(124,58,237,.4); }
+    section.tab-content{width:100%;display:flex;flex-direction:column;align-items:center;}
+    section.tab-content.hidden{display:none;}
 
-    .numbers-row { text-align:center; color:var(--muted); font-size:.85rem; letter-spacing:1px; }
-    .numbers-row span { color:var(--accent); font-weight:700; }
+    main{width:100%;max-width:760px;padding:22px 16px 48px;
+      display:flex;flex-direction:column;gap:18px;}
 
-    .method-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #21262d;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: .75rem;
-      color: var(--muted);
-      margin-top: 12px;
-    }
-    .dot { width:7px;height:7px;border-radius:50%;background:var(--green); }
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;}
+    .card-title{font-size:.7rem;font-weight:700;letter-spacing:2px;color:var(--muted);
+      text-transform:uppercase;margin-bottom:14px;}
 
-    /* Stats */
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
-    .stat-group h3 { font-size:.7rem; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; }
-    .hot-t  { color:var(--red); }
-    .cold-t { color:var(--blue); }
-    .over-t { color:#f59e0b; }
-    .mini-balls { display:flex; flex-wrap:wrap; gap:6px; }
-    .mini-ball {
-      width:30px;height:30px;border-radius:50%;
+    .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .label{font-size:.88rem;color:var(--muted);white-space:nowrap;}
+    .count-control{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .count-btn{background:#21262d;border:none;color:var(--text);font-size:1.2rem;
+      width:36px;height:36px;cursor:pointer;transition:background .15s;
+      display:flex;align-items:center;justify-content:center;}
+    .count-btn:hover{background:#30363d;}
+    .count-display{background:#0d1117;color:var(--accent);font-weight:700;font-size:1.1rem;
+      width:44px;text-align:center;line-height:36px;
+      border-left:1px solid var(--border);border-right:1px solid var(--border);}
+
+    .btn{flex:1;min-width:140px;
+      background:linear-gradient(135deg,var(--accent2),var(--accent));
+      color:#000;font-weight:800;font-size:.92rem;letter-spacing:1px;border:none;
+      border-radius:8px;padding:10px 20px;cursor:pointer;
+      transition:opacity .2s,transform .1s;text-transform:uppercase;}
+    .btn:hover{opacity:.9;}
+    .btn:active{transform:scale(.97);}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-sec{background:#21262d;color:var(--text);border:1px solid var(--border);}
+    .btn-sec:hover{background:#30363d;}
+
+    .numbers-grid{display:flex;flex-wrap:wrap;justify-content:center;
+      gap:10px;min-height:68px;align-items:center;margin:6px 0 12px;}
+    .num-ball{width:54px;height:54px;border-radius:50%;
       display:flex;align-items:center;justify-content:center;
-      font-size:.72rem;font-weight:700;
-    }
+      font-size:1.2rem;font-weight:800;
+      animation:popIn .35s cubic-bezier(.175,.885,.32,1.275) both;}
+    @keyframes popIn{from{transform:scale(0) rotate(-30deg);opacity:0;}
+      to{transform:scale(1) rotate(0deg);opacity:1;}}
+    .b1{background:radial-gradient(circle at 35% 35%,#ff9f43,#e05c00);color:#fff;
+      box-shadow:0 4px 14px rgba(224,92,0,.4);}
+    .b2{background:radial-gradient(circle at 35% 35%,#ffd32a,#f0a500);color:#000;
+      box-shadow:0 4px 14px rgba(240,165,0,.4);}
+    .b3{background:radial-gradient(circle at 35% 35%,#67e8f9,#0ea5e9);color:#000;
+      box-shadow:0 4px 14px rgba(14,165,233,.4);}
+    .b4{background:radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed);color:#fff;
+      box-shadow:0 4px 14px rgba(124,58,237,.4);}
 
-    /* Spinner */
-    .spinner {
-      width:40px;height:40px;
-      border:3px solid var(--border);
-      border-top-color:var(--accent);
-      border-radius:50%;
-      animation:spin .7s linear infinite;
-      margin:16px auto;
-    }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    .numbers-row{text-align:center;color:var(--muted);font-size:.84rem;letter-spacing:1px;}
+    .numbers-row span{color:var(--accent);font-weight:700;}
 
-    footer {
-      color:var(--muted);
-      font-size:.72rem;
-      text-align:center;
-      padding:0 16px 24px;
-    }
+    .method-badge{display:inline-flex;align-items:center;gap:6px;
+      background:#21262d;border:1px solid var(--border);border-radius:20px;
+      padding:4px 12px;font-size:.72rem;color:var(--muted);margin-top:10px;}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+    .stat-group h3{font-size:.67rem;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+    .hot-t{color:var(--red);} .cold-t{color:var(--blue);} .over-t{color:#f59e0b;}
+    .mini-balls{display:flex;flex-wrap:wrap;gap:5px;}
+    .mini-ball{width:27px;height:27px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:700;}
+
+    .spinner{width:38px;height:38px;border:3px solid var(--border);
+      border-top-color:var(--accent);border-radius:50%;
+      animation:spin .7s linear infinite;margin:14px auto;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* Backtest */
+    .progress-wrap{background:#21262d;border-radius:6px;height:10px;overflow:hidden;margin:10px 0;}
+    .progress-bar{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));
+      border-radius:6px;width:0%;transition:width .25s;}
+    .progress-label{font-size:.78rem;color:var(--muted);text-align:center;margin-top:4px;}
+
+    .bt-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+    .bt-table th{color:var(--muted);font-size:.67rem;letter-spacing:1.5px;text-transform:uppercase;
+      padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+    .bt-table td{padding:7px 10px;border-bottom:1px solid rgba(48,54,61,.4);}
+    .bt-table tr:last-child td{border-bottom:none;}
+    .bt-table tr.gold td{background:rgba(240,165,0,.07);}
+    .rank-badge{display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:50%;font-size:.7rem;font-weight:800;background:#21262d;}
+    .gold .rank-badge{background:var(--accent);color:#000;}
+    .silver .rank-badge{background:#8b949e;color:#000;}
+    .bronze .rank-badge{background:#cd7f32;color:#000;}
+    .good{color:var(--green);font-weight:700;} .bad{color:var(--red);} .ok{color:var(--muted);}
+
+    .best-badge{display:inline-flex;align-items:center;gap:8px;
+      background:rgba(63,185,80,.1);border:1px solid var(--green);
+      border-radius:10px;padding:8px 14px;font-size:.82rem;color:var(--green);flex-wrap:wrap;}
+
+    footer{color:var(--muted);font-size:.72rem;text-align:center;padding:0 16px 24px;}
   </style>
 </head>
 <body>
 
 <header>
   <h1>KINO PREDICTOR</h1>
-  <p>Allwyn.gr &mdash; Στατιστική Ανάλυση</p>
+  <p>Allwyn.gr &mdash; 100 Στρατηγικές &amp; Αυτόματη Επιλογή Καλύτερης</p>
 </header>
 
-<main>
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-pred-btn">Πρόβλεψη</button>
+  <button class="tab-btn" id="tab-back-btn">Backtest 100 Στρατηγικών</button>
+</div>
 
-  <div class="card">
-    <div class="card-title">Ρυθμίσεις Πρόβλεψης</div>
-    <div class="controls">
-      <span class="label">Αριθμοί:</span>
-      <div class="count-control">
-        <button class="count-btn" id="btn-minus">−</button>
-        <div class="count-display" id="count-disp">9</div>
-        <button class="count-btn" id="btn-plus">+</button>
+<!-- ── Prediction Tab ── -->
+<section class="tab-content" id="tab-pred">
+  <main>
+    <div class="card">
+      <div class="card-title">Ρυθμίσεις Πρόβλεψης</div>
+      <div class="controls">
+        <span class="label">Αριθμοί:</span>
+        <div class="count-control">
+          <button class="count-btn" id="btn-minus">−</button>
+          <div class="count-display" id="count-disp">9</div>
+          <button class="count-btn" id="btn-plus">+</button>
+        </div>
+        <button class="btn" id="predict-btn">Κάνε Πρόβλεψη</button>
       </div>
-      <button class="predict-btn" id="predict-btn">Κάνε Πρόβλεψη</button>
+      <div id="strat-info" style="display:none;margin-top:10px;font-size:.78rem;color:var(--muted);">
+        Στρατηγική: <span id="strat-name" style="color:var(--accent);font-weight:700;"></span>
+        &nbsp;·&nbsp;<a href="#" id="run-bt-link" style="color:var(--blue);font-size:.75rem;">Τρέξε Backtest</a>
+      </div>
     </div>
-  </div>
 
-  <div class="card" style="text-align:center">
-    <div class="card-title">Επόμενη Κλήρωση</div>
-    <div class="numbers-grid" id="numbers-grid">
-      <span style="color:var(--muted);font-size:.9rem">Πάτησε «Κάνε Πρόβλεψη»</span>
+    <div class="card" style="text-align:center;">
+      <div class="card-title">Επόμενη Κλήρωση</div>
+      <div class="numbers-grid" id="numbers-grid">
+        <span style="color:var(--muted);font-size:.9rem;">Πάτησε «Κάνε Πρόβλεψη»</span>
+      </div>
+      <div id="numbers-row" class="numbers-row"></div>
+      <div id="badge" class="method-badge" style="display:none;">
+        <span class="dot"></span><span id="badge-text"></span>
+      </div>
     </div>
-    <div id="numbers-row" class="numbers-row"></div>
-    <div id="badge" class="method-badge" style="display:none">
-      <span class="dot"></span><span id="badge-text"></span>
+
+    <div class="card" id="stats-card" style="display:none;">
+      <div class="card-title">Στατιστικά OPAP</div>
+      <div class="stats-grid" id="stats-grid"></div>
     </div>
-  </div>
+  </main>
+</section>
 
-  <div class="card" id="stats-card" style="display:none">
-    <div class="card-title">Στατιστικά OPAP (1801 κληρώσεις)</div>
-    <div class="stats-grid" id="stats-grid"></div>
-  </div>
+<!-- ── Backtest Tab ── -->
+<section class="tab-content hidden" id="tab-back">
+  <main>
+    <div class="card">
+      <div class="card-title">Backtest 100 Στρατηγικών</div>
+      <p style="color:var(--muted);font-size:.84rem;line-height:1.5;margin-bottom:16px;">
+        Δοκιμάζει 100 διαφορετικές στρατηγικές (Markov, Hot, Cold, Lag, Co-occurrence…)
+        στις τελευταίες πραγματικές κληρώσεις και επιλέγει αυτόματα την καλύτερη
+        για τις επόμενες προβλέψεις.
+      </p>
+      <div class="controls">
+        <button class="btn" id="backtest-btn">▶ Εκτέλεση Backtest</button>
+        <span id="bt-last" style="display:none;font-size:.75rem;color:var(--muted);"></span>
+      </div>
+    </div>
 
-</main>
+    <div class="card" id="bt-prog-card" style="display:none;">
+      <div class="card-title">Πρόοδος</div>
+      <div class="progress-wrap"><div class="progress-bar" id="bt-bar"></div></div>
+      <div class="progress-label" id="bt-label">0%</div>
+    </div>
 
-<footer>
-  Το Kino είναι τυχαίο παιχνίδι &mdash; καμία εγγύηση αποτελέσματος.
-</footer>
+    <div class="card" id="bt-res-card" style="display:none;">
+      <div class="card-title">Αποτελέσματα</div>
+      <div id="bt-best" style="margin-bottom:16px;display:none;">
+        <div class="best-badge">
+          <span class="dot"></span>
+          <span>Καλύτερη στρατηγική:</span>
+          <strong id="bt-best-name"></strong>
+          <span>— Μέσος όρος:</span>
+          <strong id="bt-best-hits"></strong>
+          <span id="bt-best-vs" style="color:var(--muted);"></span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="bt-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Στρατηγική</th>
+              <th>Μέσες Επιτυχίες</th><th>vs Τύχη</th>
+            </tr>
+          </thead>
+          <tbody id="bt-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</section>
+
+<footer>Το Kino είναι τυχαίο παιχνίδι &mdash; καμία εγγύηση αποτελέσματος.</footer>
 
 <script>
+/* ════════════════════════════════════════
+   CONSTANTS & STATE
+   ════════════════════════════════════════ */
 const GAME_ID   = 1100;
-const DRAWS_API = `https://api.opap.gr/draws/v3.0/${GAME_ID}`;
+const API_BASE  = `https://api.opap.gr/draws/v3.0/${GAME_ID}`;
 
-let count = 9;
-const countDisp  = document.getElementById("count-disp");
-const btnMinus   = document.getElementById("btn-minus");
-const btnPlus    = document.getElementById("btn-plus");
-const predictBtn = document.getElementById("predict-btn");
-const grid       = document.getElementById("numbers-grid");
-const row        = document.getElementById("numbers-row");
-const badge      = document.getElementById("badge");
-const badgeText  = document.getElementById("badge-text");
-const statsCard  = document.getElementById("stats-card");
-const statsGrid  = document.getElementById("stats-grid");
+let pickCount    = 9;
+let bestStrategy = null;   // set after backtest
 
-btnMinus.onclick = () => { if (count > 1)  { count--; countDisp.textContent = count; } };
-btnPlus.onclick  = () => { if (count < 20) { count++; countDisp.textContent = count; } };
+/* ── DOM refs ── */
+const countDisp   = document.getElementById("count-disp");
+const btnMinus    = document.getElementById("btn-minus");
+const btnPlus     = document.getElementById("btn-plus");
+const predictBtn  = document.getElementById("predict-btn");
+const grid        = document.getElementById("numbers-grid");
+const numRow      = document.getElementById("numbers-row");
+const badge       = document.getElementById("badge");
+const badgeText   = document.getElementById("badge-text");
+const statsCard   = document.getElementById("stats-card");
+const statsGrid   = document.getElementById("stats-grid");
+const stratInfo   = document.getElementById("strat-info");
+const stratName   = document.getElementById("strat-name");
+const runBtLink   = document.getElementById("run-bt-link");
 
-/* ── Ball colour by range ── */
+const tabPredBtn  = document.getElementById("tab-pred-btn");
+const tabBackBtn  = document.getElementById("tab-back-btn");
+const tabPred     = document.getElementById("tab-pred");
+const tabBack     = document.getElementById("tab-back");
+
+const backtestBtn = document.getElementById("backtest-btn");
+const btLast      = document.getElementById("bt-last");
+const btProgCard  = document.getElementById("bt-prog-card");
+const btBar       = document.getElementById("bt-bar");
+const btLabel     = document.getElementById("bt-label");
+const btResCard   = document.getElementById("bt-res-card");
+const btBest      = document.getElementById("bt-best");
+const btBestName  = document.getElementById("bt-best-name");
+const btBestHits  = document.getElementById("bt-best-hits");
+const btBestVs    = document.getElementById("bt-best-vs");
+const btTbody     = document.getElementById("bt-tbody");
+
+/* ── Tab switching ── */
+tabPredBtn.onclick = () => switchTab("pred");
+tabBackBtn.onclick = () => switchTab("back");
+runBtLink.onclick  = (e) => { e.preventDefault(); switchTab("back"); };
+
+function switchTab(t) {
+  if (t === "pred") {
+    tabPredBtn.classList.add("active");  tabBackBtn.classList.remove("active");
+    tabPred.classList.remove("hidden");  tabBack.classList.add("hidden");
+  } else {
+    tabBackBtn.classList.add("active");  tabPredBtn.classList.remove("active");
+    tabBack.classList.remove("hidden");  tabPred.classList.add("hidden");
+  }
+}
+
+/* ── Count controls ── */
+btnMinus.onclick = () => { if (pickCount > 1)  { pickCount--; countDisp.textContent = pickCount; } };
+btnPlus.onclick  = () => { if (pickCount < 20) { pickCount++; countDisp.textContent = pickCount; } };
+
+/* ════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════ */
 function ballCls(n) {
   if (n <= 20) return "b1";
   if (n <= 40) return "b2";
@@ -263,7 +296,130 @@ function ballCls(n) {
   return "b4";
 }
 
-/* ── Render balls ── */
+function normalize(map) {
+  const vals = Object.values(map);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const rng = mx - mn || 1;
+  const out = {};
+  for (const [k, v] of Object.entries(map)) out[+k] = (v - mn) / rng;
+  return out;
+}
+
+/* Deterministic top-N — used in backtest for reproducibility */
+function topN(scores, n) {
+  return Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([k]) => +k)
+    .sort((a, b) => a - b);
+}
+
+/* Weighted random — used for actual predictions */
+function weightedSample(scores, n) {
+  const nums    = Object.keys(scores).map(Number);
+  const weights = nums.map(k => Math.max(scores[k] + Math.random() * 0.12, 0.001));
+  const sel = [], remN = [...nums], remW = [...weights];
+  for (let i = 0; i < Math.min(n, remN.length); i++) {
+    const total = remW.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, cum = 0, idx = 0;
+    for (let j = 0; j < remW.length; j++) { cum += remW[j]; if (r <= cum) { idx = j; break; } }
+    sel.push(remN.splice(idx, 1)[0]);
+    remW.splice(idx, 1);
+  }
+  return sel.sort((a, b) => a - b);
+}
+
+/* ════════════════════════════════════════
+   OPAP API
+   ════════════════════════════════════════ */
+async function fetchDraws() {
+  for (const limit of [100, 50, 20, 10]) {
+    try {
+      const res = await fetch(`${API_BASE}/last/${limit}`);
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.content || []);
+      }
+    } catch (_) { /* try next */ }
+  }
+  throw new Error("Δεν ήταν δυνατή η φόρτωση κληρώσεων από OPAP API");
+}
+
+function parseNumbers(draw) {
+  const wn = draw.winningNumbers || {};
+  const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
+  return list.length === 20 ? list.map(Number) : null;
+}
+
+/* ════════════════════════════════════════
+   MATRIX BUILDERS
+   ════════════════════════════════════════ */
+
+/* Transition: draw[i] → draw[i+1] */
+function buildTrans(draws) {
+  const m = {};
+  for (let i = 0; i < draws.length - 1; i++) {
+    draws[i].forEach(a => {
+      if (!m[a]) m[a] = {};
+      draws[i + 1].forEach(b => { m[a][b] = (m[a][b] || 0) + 1; });
+    });
+  }
+  return m;
+}
+
+/* Co-occurrence: numbers appearing in the same draw */
+function buildCooc(draws) {
+  const m = {};
+  draws.forEach(d => {
+    d.forEach(a => {
+      if (!m[a]) m[a] = {};
+      d.forEach(b => { if (a !== b) m[a][b] = (m[a][b] || 0) + 1; });
+    });
+  });
+  return m;
+}
+
+/* Lag matrix: draw[i] → draw[i+lag] */
+function buildLag(draws, lag) {
+  const m = {};
+  for (let i = 0; i + lag < draws.length; i++) {
+    draws[i].forEach(a => {
+      if (!m[a]) m[a] = {};
+      draws[i + lag].forEach(b => { m[a][b] = (m[a][b] || 0) + 1; });
+    });
+  }
+  return m;
+}
+
+/* Score from a matrix given a context draw */
+function scoreMatrix(matrix, ctx) {
+  const s = {};
+  for (let n = 1; n <= 80; n++) s[n] = 0;
+  ctx.forEach(m => {
+    if (matrix[m]) for (let n = 1; n <= 80; n++) s[n] += matrix[m][n] || 0;
+  });
+  return s;
+}
+
+/* Frequency + gap analysis */
+function analyzeDraws(draws) {
+  const freq = {}, lastSeen = {};
+  for (let n = 1; n <= 80; n++) freq[n] = 0;
+  draws.forEach((d, idx) => d.forEach(n => {
+    freq[n]++;
+    if (!(n in lastSeen)) lastSeen[n] = idx;
+  }));
+  const gap = {};
+  for (let n = 1; n <= 80; n++) gap[n] = n in lastSeen ? lastSeen[n] : draws.length;
+  const hot     = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([n]) => +n);
+  const cold    = Object.entries(freq).sort((a, b) => a[1] - b[1]).slice(0, 10).map(([n]) => +n);
+  const overdue = Object.entries(gap).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([n]) => +n);
+  return { freq, gap, hot, cold, overdue };
+}
+
+/* ════════════════════════════════════════
+   RENDER HELPERS
+   ════════════════════════════════════════ */
 function renderBalls(nums) {
   grid.innerHTML = "";
   nums.forEach((n, i) => {
@@ -273,15 +429,14 @@ function renderBalls(nums) {
     b.style.animationDelay = `${i * 80}ms`;
     grid.appendChild(b);
   });
-  row.innerHTML = `<span>${nums.join(" — ")}</span>`;
+  numRow.innerHTML = `<span>${nums.join(" — ")}</span>`;
 }
 
-/* ── Render stats ── */
 function renderStats(hot, cold, overdue) {
   const groups = [
-    { label:"Hot",     cls:"hot-t",  data: hot },
-    { label:"Cold",    cls:"cold-t", data: cold },
-    { label:"Overdue", cls:"over-t", data: overdue },
+    { label: "Hot",     cls: "hot-t",  data: hot },
+    { label: "Cold",    cls: "cold-t", data: cold },
+    { label: "Overdue", cls: "over-t", data: overdue },
   ];
   statsGrid.innerHTML = "";
   groups.forEach(g => {
@@ -301,182 +456,271 @@ function renderStats(hot, cold, overdue) {
   statsCard.style.display = "";
 }
 
-/* ── Scoring helpers ── */
-function normalize(map) {
-  const vals = Object.values(map);
-  const mn = Math.min(...vals), mx = Math.max(...vals);
-  const rng = mx - mn || 1;
-  const out = {};
-  for (const [k, v] of Object.entries(map)) out[+k] = (v - mn) / rng;
-  return out;
-}
-
-function weightedSample(scores, n, noise = 0.12) {
-  const nums    = Object.keys(scores).map(Number);
-  const weights = nums.map(k => Math.max(scores[k] + Math.random() * noise, 0.001));
-  const selected = [];
-  const remN = [...nums], remW = [...weights];
-  for (let i = 0; i < Math.min(n, remN.length); i++) {
-    const total = remW.reduce((a, b) => a + b, 0);
-    let r = Math.random() * total, cum = 0, idx = 0;
-    for (let j = 0; j < remW.length; j++) {
-      cum += remW[j];
-      if (r <= cum) { idx = j; break; }
-    }
-    selected.push(remN.splice(idx, 1)[0]);
-    remW.splice(idx, 1);
-  }
-  return selected.sort((a, b) => a - b);
-}
-
-/* ── OPAP Draws API ── */
-async function fetchDraws() {
-  for (const limit of [100, 50, 20, 10]) {
-    const res = await fetch(`${DRAWS_API}/last/${limit}`);
-    if (res.ok) {
-      const data = await res.json();
-      return Array.isArray(data) ? data : (data.content || []);
-    }
-  }
-  throw new Error("Δεν ήταν δυνατή η φόρτωση κληρώσεων");
-}
-
-function parseNumbers(draw) {
-  const wn = draw.winningNumbers || {};
-  const list = wn.list || wn.numbers || draw.numbers || draw.drawnNumbers || [];
-  return list.length === 20 ? list.map(Number) : null;
-}
-
-/* ── Markov Chain Engine ── */
-
-// P(n in draw[i+1] | m in draw[i]) — transition matrix
-function buildTransitionMatrix(draws) {
-  const matrix = {};
-  for (let i = 0; i < draws.length - 1; i++) {
-    const cur  = draws[i];
-    const next = draws[i + 1];
-    cur.forEach(m => {
-      if (!matrix[m]) matrix[m] = {};
-      next.forEach(n => { matrix[m][n] = (matrix[m][n] || 0) + 1; });
-    });
-  }
-  return matrix;
-}
-
-// Numbers that tend to appear together in the same draw
-function buildCooccurrence(draws) {
-  const cooc = {};
-  draws.forEach(draw => {
-    draw.forEach(m => {
-      if (!cooc[m]) cooc[m] = {};
-      draw.forEach(n => {
-        if (m !== n) cooc[m][n] = (cooc[m][n] || 0) + 1;
-      });
-    });
-  });
-  return cooc;
-}
-
-// Lag-2: P(n | draw[i-2])
-function buildLagMatrix(draws, lag = 2) {
-  const matrix = {};
-  for (let i = 0; i < draws.length - lag; i++) {
-    const past = draws[i];
-    const fut  = draws[i + lag];
-    past.forEach(m => {
-      if (!matrix[m]) matrix[m] = {};
-      fut.forEach(n => { matrix[m][n] = (matrix[m][n] || 0) + 1; });
-    });
-  }
-  return matrix;
-}
-
-function scoreFromMatrix(matrix, contextDraw) {
-  const scores = {};
-  for (let n = 1; n <= 80; n++) scores[n] = 0;
-  contextDraw.forEach(m => {
-    if (matrix[m]) {
-      for (let n = 1; n <= 80; n++) {
-        scores[n] += matrix[m][n] || 0;
-      }
-    }
-  });
-  return scores;
-}
-
-function analyzeDraws(draws) {
-  const freq = {}, lastSeen = {};
-  for (let n = 1; n <= 80; n++) freq[n] = 0;
-  draws.forEach((d, idx) => d.forEach(n => {
-    freq[n]++;
-    if (!(n in lastSeen)) lastSeen[n] = idx;
-  }));
-  const gap = {};
-  for (let n = 1; n <= 80; n++) gap[n] = n in lastSeen ? lastSeen[n] : draws.length;
-  const hot     = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,10).map(([n])=>+n);
-  const cold    = Object.entries(freq).sort((a,b) => a[1]-b[1]).slice(0,10).map(([n])=>+n);
-  const overdue = Object.entries(gap).sort((a,b) => b[1]-a[1]).slice(0,10).map(([n])=>+n);
-  return { freq, gap, hot, cold, overdue };
-}
-
-/* ── Main prediction logic ── */
-async function predict() {
+/* ════════════════════════════════════════
+   PREDICTION
+   ════════════════════════════════════════ */
+predictBtn.onclick = async () => {
   predictBtn.disabled = true;
   predictBtn.textContent = "Υπολογισμός…";
   grid.innerHTML = '<div class="spinner"></div>';
-  row.innerHTML = "";
+  numRow.innerHTML = "";
   badge.style.display = "none";
   statsCard.style.display = "none";
 
   try {
     const raw   = await fetchDraws();
     const draws = raw.map(parseNumbers).filter(Boolean);
-    if (draws.length < 10) throw new Error(`Μόνο ${draws.length} έγκυρες κληρώσεις`);
+    if (draws.length < 3) throw new Error(`Μόνο ${draws.length} έγκυρες κληρώσεις`);
 
-    // draws[0] = most recent completed draw (context for prediction)
-    const lastDraw  = draws[0];
-    const prev2Draw = draws[1] || draws[0];
+    /* Use best strategy if available, else default Balanced */
+    const s = bestStrategy || { wT:0.35, wC:0.20, wL:0.15, wF:0.15, wG:0.15, lag:2, name:"Balanced (default)" };
 
-    // Build Markov matrices
-    const trans = buildTransitionMatrix(draws);
-    const cooc  = buildCooccurrence(draws);
-    const lag2  = buildLagMatrix(draws, 2);
-
-    // Score from each signal
-    const sT  = normalize(scoreFromMatrix(trans, lastDraw));   // transition from last draw
-    const sC  = normalize(scoreFromMatrix(cooc,  lastDraw));   // co-occurrence with last draw
-    const sL  = normalize(scoreFromMatrix(lag2,  prev2Draw));  // lag-2 from 2 draws ago
+    /* Build matrices from all available draws */
+    const trans  = buildTrans(draws);
+    const cooc   = buildCooc(draws);
+    const lagMat = buildLag(draws, s.lag);
     const { freq, gap, hot, cold, overdue } = analyzeDraws(draws);
-    const sF  = normalize(freq);
-    const sG  = normalize(gap);
 
-    // Combined weighted score
-    // Transition (Markov) gets most weight; co-occ & lag add correlation signal
-    const scores = {};
+    /* Scoring contexts:
+       - Transition/Co-occ: most recent draw (draws[0])
+       - Lag signal: draw `lag-1` positions ago (so lag matrix maps it to next draw) */
+    const ctx   = draws[0];
+    const lagCtx = draws[Math.min(s.lag - 1, draws.length - 1)];
+
+    const sT = normalize(scoreMatrix(trans,  ctx));
+    const sC = normalize(scoreMatrix(cooc,   ctx));
+    const sL = normalize(scoreMatrix(lagMat, lagCtx));
+    const sF = normalize(freq);
+    const sG = normalize(gap);
+
+    const sc = {};
     for (let n = 1; n <= 80; n++) {
-      scores[n] =
-        0.35 * (sT[n]  || 0) +   // Markov transition
-        0.20 * (sC[n]  || 0) +   // co-occurrence
-        0.15 * (sL[n]  || 0) +   // lag-2
-        0.15 * (sF[n]  || 0) +   // frequency
-        0.15 * (sG[n]  || 0);    // gap/overdue
+      sc[n] = s.wT * (sT[n] || 0) + s.wC * (sC[n] || 0) + s.wL * (sL[n] || 0)
+            + s.wF * (sF[n] || 0) + s.wG * (sG[n] || 0);
     }
 
-    const numbers = weightedSample(scores, count);
-    renderStats(hot, cold, overdue);
+    const numbers = weightedSample(sc, pickCount);
     renderBalls(numbers);
-    badgeText.textContent = `Markov · ${draws.length} κληρώσεις · ${new Date().toLocaleString("el-GR")}`;
+    renderStats(hot, cold, overdue);
+    badgeText.textContent = `${s.name} · ${draws.length} κληρώσεις · ${new Date().toLocaleString("el-GR")}`;
     badge.style.display = "inline-flex";
 
+    /* Update strategy label */
+    stratName.textContent   = s.name;
+    stratInfo.style.display = "";
+
   } catch (err) {
-    grid.innerHTML = `<span style="color:var(--red)">Σφάλμα σύνδεσης με OPAP API: ${err.message}</span>`;
+    grid.innerHTML = `<span style="color:var(--red)">Σφάλμα: ${err.message}</span>`;
   } finally {
     predictBtn.disabled = false;
     predictBtn.textContent = "Κάνε Πρόβλεψη";
   }
+};
+
+/* ════════════════════════════════════════
+   100 STRATEGIES
+   Weights: [wT=Transition, wC=Co-occ, wL=Lag, wF=Frequency, wG=Gap]
+   ════════════════════════════════════════ */
+const ARCHETYPES = [
+  /* name,          wT,   wC,   wL,   wF,   wG  */
+  ["Pure-Markov",  0.80, 0.10, 0.00, 0.05, 0.05],
+  ["Markov+Co",    0.55, 0.25, 0.10, 0.05, 0.05],
+  ["Markov+Lag",   0.55, 0.10, 0.25, 0.05, 0.05],
+  ["Balanced",     0.35, 0.20, 0.15, 0.15, 0.15],
+  ["Equal",        0.20, 0.20, 0.20, 0.20, 0.20],
+  ["Hot-Freq",     0.10, 0.10, 0.05, 0.65, 0.10],
+  ["Overdue",      0.10, 0.05, 0.10, 0.10, 0.65],
+  ["Co-Focus",     0.15, 0.60, 0.10, 0.10, 0.05],
+  ["Trans+Lag",    0.45, 0.05, 0.45, 0.03, 0.02],
+  ["Hot+Markov",   0.45, 0.10, 0.05, 0.35, 0.05],
+  ["Lag-Heavy",    0.15, 0.10, 0.60, 0.10, 0.05],
+  ["Gap+Markov",   0.40, 0.10, 0.10, 0.05, 0.35],
+];
+
+const STRATEGIES = [];
+outer:
+for (const [name, wT, wC, wL, wF, wG] of ARCHETYPES) {
+  for (const lag of [1, 2, 3]) {
+    for (const win of [10, 20, 40]) {
+      if (STRATEGIES.length >= 100) break outer;
+      STRATEGIES.push({
+        id: STRATEGIES.length + 1,
+        name: `${name} L${lag}W${win}`,
+        wT, wC, wL, wF, wG, lag, win
+      });
+    }
+  }
+}
+/* Total: 12×3×3=108, trimmed to 100 */
+
+/* ════════════════════════════════════════
+   BACKTEST ENGINE
+   Walk-forward: test on last TEST_SIZE draws,
+   train on draws just after them.
+   ════════════════════════════════════════ */
+async function runBacktest(draws, cnt, onProgress) {
+  const TEST_SIZE = Math.min(30, Math.floor(draws.length * 0.3));
+  if (draws.length < TEST_SIZE + 5)
+    throw new Error(`Μόνο ${draws.length} κληρώσεις — χρειάζονται τουλάχιστον ${TEST_SIZE + 5}`);
+
+  const testDraws = draws.slice(0, TEST_SIZE);
+  const baseline  = cnt * 20 / 80; /* expected hits by pure chance */
+
+  /* ── Pre-build matrix sets for each unique (win, lag) pair ── */
+  const matCache = {};
+  const keys = [...new Set(STRATEGIES.map(s => `${s.win}_${s.lag}`))];
+
+  for (const key of keys) {
+    const [win, lag] = key.split("_").map(Number);
+    /* training window: draws just after the test set */
+    const trainStart = TEST_SIZE;
+    const trainEnd   = Math.min(draws.length, trainStart + win + lag + 2);
+    const td = draws.slice(trainStart, trainEnd);
+    if (td.length < 3) continue;
+    const { freq, gap } = analyzeDraws(td);
+    matCache[key] = {
+      trans:    buildTrans(td),
+      cooc:     buildCooc(td),
+      lagMat:   buildLag(td, lag),
+      nFreq:    normalize(freq),
+      nGap:     normalize(gap),
+    };
+  }
+
+  /* ── Group strategies by (win, lag) to re-use computed signals ── */
+  const byKey = {};
+  for (const s of STRATEGIES) {
+    const k = `${s.win}_${s.lag}`;
+    if (!byKey[k]) byKey[k] = [];
+    byKey[k].push(s);
+  }
+
+  /* ── Initialize result counters ── */
+  const res = {};
+  for (const s of STRATEGIES) res[s.id] = { ...s, hits: 0, tested: 0 };
+
+  let done = 0;
+
+  for (const [key, strats] of Object.entries(byKey)) {
+    const mat = matCache[key];
+    const [, lag] = key.split("_").map(Number);
+
+    if (!mat) { done += strats.length; onProgress(Math.round(done / 100 * 100)); continue; }
+
+    for (let i = 0; i < testDraws.length; i++) {
+      /* context = draw just BEFORE test draw i (i.e. draws[i+1]) */
+      if (i + 1 >= draws.length) break;
+      const ctx    = draws[i + 1];
+      /* lag context = draw `lag` steps before test draw i */
+      const lagCtx = draws[Math.min(i + lag, draws.length - 1)];
+      const actual = new Set(testDraws[i]);
+
+      /* compute 5 normalized signals for this context */
+      const sT = normalize(scoreMatrix(mat.trans,  ctx));
+      const sC = normalize(scoreMatrix(mat.cooc,   ctx));
+      const sL = normalize(scoreMatrix(mat.lagMat, lagCtx));
+      const sF = mat.nFreq;
+      const sG = mat.nGap;
+
+      /* apply each strategy's weights */
+      for (const s of strats) {
+        const sc = {};
+        for (let n = 1; n <= 80; n++) {
+          sc[n] = s.wT * (sT[n] || 0) + s.wC * (sC[n] || 0) + s.wL * (sL[n] || 0)
+                + s.wF * (sF[n] || 0) + s.wG * (sG[n] || 0);
+        }
+        const predicted = topN(sc, cnt);
+        res[s.id].hits   += predicted.filter(n => actual.has(n)).length;
+        res[s.id].tested += 1;
+      }
+    }
+
+    done += strats.length;
+    onProgress(Math.round(done / 100 * 100));
+    await new Promise(r => setTimeout(r, 0)); /* yield to UI thread */
+  }
+
+  return Object.values(res)
+    .map(r => ({ ...r, avgHits: r.tested > 0 ? r.hits / r.tested : 0, baseline }))
+    .sort((a, b) => b.avgHits - a.avgHits);
 }
 
-predictBtn.addEventListener("click", predict);
+/* ════════════════════════════════════════
+   RENDER BACKTEST RESULTS
+   ════════════════════════════════════════ */
+function renderBtResults(sorted) {
+  btTbody.innerHTML = "";
+  const show = sorted.slice(0, 20); /* top 20 */
+
+  show.forEach((r, i) => {
+    const rank = i + 1;
+    const diff = r.avgHits - r.baseline;
+    const dStr = (diff >= 0 ? "+" : "") + diff.toFixed(2);
+    const cls  = diff > 0.05 ? "good" : diff < -0.05 ? "bad" : "ok";
+    const tr   = document.createElement("tr");
+    if (rank === 1) tr.classList.add("gold");
+    else if (rank === 2) tr.classList.add("silver");
+    else if (rank === 3) tr.classList.add("bronze");
+    tr.innerHTML = `
+      <td><span class="rank-badge">${rank}</span></td>
+      <td>${r.name}</td>
+      <td class="${cls}">${r.avgHits.toFixed(2)}</td>
+      <td class="${cls}">${dStr}</td>`;
+    btTbody.appendChild(tr);
+  });
+
+  const best = sorted[0];
+  const bDiff = best.avgHits - best.baseline;
+  btBestName.textContent = best.name;
+  btBestHits.textContent = best.avgHits.toFixed(2) + " αρ./κλήρωση";
+  btBestVs.textContent   = `(τύχη: ${best.baseline.toFixed(2)}, Δ${bDiff >= 0 ? "+" : ""}${bDiff.toFixed(2)})`;
+  btBest.style.display   = "";
+  btResCard.style.display = "";
+}
+
+/* ════════════════════════════════════════
+   BACKTEST BUTTON
+   ════════════════════════════════════════ */
+backtestBtn.onclick = async () => {
+  backtestBtn.disabled = true;
+  backtestBtn.textContent = "Τρέχει…";
+  btProgCard.style.display = "";
+  btResCard.style.display  = "none";
+  btBest.style.display     = "none";
+  btBar.style.width        = "0%";
+  btLabel.textContent      = "0%";
+
+  try {
+    const raw   = await fetchDraws();
+    const draws = raw.map(parseNumbers).filter(Boolean);
+    if (draws.length < 15) throw new Error(`Μόνο ${draws.length} κληρώσεις`);
+
+    const sorted = await runBacktest(draws, pickCount, pct => {
+      btBar.style.width   = pct + "%";
+      btLabel.textContent = pct + "%";
+    });
+
+    btBar.style.width   = "100%";
+    btLabel.textContent = "100% — Ολοκληρώθηκε!";
+
+    bestStrategy = sorted[0];
+    renderBtResults(sorted);
+
+    /* Update prediction tab badge */
+    stratName.textContent    = bestStrategy.name;
+    stratInfo.style.display  = "";
+
+    const now = new Date().toLocaleString("el-GR");
+    btLast.textContent  = `Τελευταίο: ${now}`;
+    btLast.style.display = "";
+
+  } catch (err) {
+    btLabel.textContent = "Σφάλμα: " + err.message;
+  } finally {
+    backtestBtn.disabled = false;
+    backtestBtn.textContent = "▶ Εκτέλεση Backtest";
+  }
+};
 </script>
 
 </body>
