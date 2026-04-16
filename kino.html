@@ -98,7 +98,31 @@
       background:rgba(63,185,80,.1);border:1px solid var(--green);
       border-radius:10px;padding:10px 14px;font-size:.82rem;color:var(--green);}
     footer{color:var(--muted);font-size:.72rem;text-align:center;padding:0 16px 24px;}
-  </style>
+
+    /* ── Holy Grail ── */
+    .hg-btn{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;
+      font-weight:800;font-size:.92rem;letter-spacing:1px;border:none;
+      border-radius:8px;padding:10px 20px;cursor:pointer;flex:1;min-width:140px;
+      transition:opacity .2s,transform .1s;text-transform:uppercase;}
+    .hg-btn:hover{opacity:.9;} .hg-btn:active{transform:scale(.97);}
+    .hg-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .hg-result{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0;}
+    .hg-ball{width:100px;height:100px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:2.4rem;font-weight:900;
+      animation:popIn .4s cubic-bezier(.175,.885,.32,1.275) both;}
+    .hg-votes{font-size:.82rem;color:var(--muted);text-align:center;}
+    .hg-votes strong{color:var(--accent);font-size:1.1rem;}
+    .vote-bar-wrap{width:100%;max-width:280px;background:#21262d;
+      border-radius:20px;height:14px;overflow:hidden;}
+    .vote-bar{height:100%;border-radius:20px;
+      background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width .6s ease;}
+    .hg-candidates{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+    .hg-cand{display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .hg-cand .mini-ball{width:36px;height:36px;font-size:.82rem;}
+    .hg-cand .cand-votes{font-size:.65rem;color:var(--muted);}
+    .hg-disclaimer{font-size:.72rem;color:var(--muted);text-align:center;
+      font-style:italic;margin-top:4px;}</style>
 </head>
 <body>
 
@@ -146,6 +170,33 @@
     <div class="card" id="stats-card" style="display:none;">
       <div class="card-title">Στατιστικά OPAP</div>
       <div class="stats-grid" id="stats-grid"></div>
+    </div>
+
+    <!-- Holy Grail card -->
+    <div class="card">
+      <div class="card-title">⚡ Άγιο Δισκοπότηρο — 1 Αριθμός</div>
+      <p style="color:var(--muted);font-size:.82rem;line-height:1.5;margin-bottom:14px;">
+        100 στρατηγικές ψηφίζουν τον <strong style="color:var(--text);">έναν</strong> αριθμό
+        με τη μεγαλύτερη πιθανότητα να βγει. Consensus voting — όχι εγγύηση.
+      </p>
+      <div class="controls">
+        <button class="hg-btn" id="hg-btn">⚡ Βρες τον Αριθμό</button>
+      </div>
+      <div id="hg-result-wrap" style="display:none;margin-top:20px;">
+        <div class="hg-result">
+          <div id="hg-ball" class="hg-ball b4"></div>
+          <div class="hg-votes">
+            <strong id="hg-vote-count"></strong> / 100 στρατηγικές συμφωνούν
+          </div>
+          <div class="vote-bar-wrap">
+            <div class="vote-bar" id="hg-vote-bar" style="width:0%"></div>
+          </div>
+          <div class="hg-candidates" id="hg-candidates"></div>
+          <div class="hg-disclaimer">
+            Πιθανότητα τύχης: 25% · Αυτό είναι ο «ισχυρότερος» αριθμός κατά consensus
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </section>
@@ -350,6 +401,94 @@ function analyzeDraws(draws) {
   const overdue = Object.entries(gap).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([n]) => +n);
   return { freq, gap, hot, cold, overdue };
 }
+
+/* ── Holy Grail DOM ── */
+const hgBtn        = document.getElementById("hg-btn");
+const hgResultWrap = document.getElementById("hg-result-wrap");
+const hgBall       = document.getElementById("hg-ball");
+const hgVoteCount  = document.getElementById("hg-vote-count");
+const hgVoteBar    = document.getElementById("hg-vote-bar");
+const hgCandidates = document.getElementById("hg-candidates");
+
+/* ── Holy Grail: 100-strategy consensus vote for 1 number ── */
+hgBtn.onclick = async () => {
+  hgBtn.disabled = true;
+  hgBtn.textContent = "Ψηφίζουν…";
+  hgResultWrap.style.display = "none";
+
+  try {
+    const raw   = await fetchDraws();
+    const draws = raw.map(parseNumbers).filter(Boolean);
+    if (draws.length < 5) throw new Error("Ανεπαρκή δεδομένα");
+
+    /* Build all matrices once */
+    const trans = buildTrans(draws);
+    const cooc  = buildCooc(draws);
+    const { freq, gap } = analyzeDraws(draws);
+    const nFreq = normalize(freq);
+    const nGap  = normalize(gap);
+    const ctx   = draws[0];
+
+    /* Build lag matrices for each unique lag */
+    const lagMats = {};
+    for (const s of STRATEGIES)
+      if (!lagMats[s.lag]) lagMats[s.lag] = buildLag(draws, s.lag);
+
+    /* Each strategy votes for its #1 number */
+    const votes = {};
+    for (let n = 1; n <= 80; n++) votes[n] = 0;
+
+    for (const s of STRATEGIES) {
+      const sT = normalize(scoreMatrix(trans,       ctx));
+      const sC = normalize(scoreMatrix(cooc,        ctx));
+      const sL = normalize(scoreMatrix(lagMats[s.lag], ctx));
+      const sc = {};
+      for (let n = 1; n <= 80; n++)
+        sc[n] = s.wT*(sT[n]||0) + s.wC*(sC[n]||0) + s.wL*(sL[n]||0)
+              + s.wF*(nFreq[n]||0) + s.wG*(nGap[n]||0);
+
+      /* Top-1 vote */
+      const winner = +Object.entries(sc).sort((a, b) => b[1] - a[1])[0][0];
+      votes[winner]++;
+    }
+
+    /* Sort by votes */
+    const ranked = Object.entries(votes)
+      .map(([n, v]) => ({ n: +n, v }))
+      .sort((a, b) => b.v - a.v);
+
+    const best = ranked[0];
+    const bc   = best.n <= 20 ? "b1" : best.n <= 40 ? "b2" : best.n <= 60 ? "b3" : "b4";
+
+    /* Render winner ball */
+    hgBall.className = `hg-ball ${bc}`;
+    hgBall.textContent = best.n;
+    hgVoteCount.textContent = best.v;
+    hgVoteBar.style.width = best.v + "%";
+
+    /* Render top-5 candidates */
+    hgCandidates.innerHTML = "";
+    ranked.slice(0, 5).forEach((r, i) => {
+      const cls  = r.n <= 20 ? "b1" : r.n <= 40 ? "b2" : r.n <= 60 ? "b3" : "b4";
+      const div  = document.createElement("div");
+      div.className = "hg-cand";
+      div.innerHTML = `
+        <div class="mini-ball ${cls}" style="width:36px;height:36px;font-size:.82rem;">${r.n}</div>
+        <div class="cand-votes" style="font-size:.65rem;color:var(--muted);">${r.v} ψήφοι</div>`;
+      hgCandidates.appendChild(div);
+    });
+
+    hgResultWrap.style.display = "";
+
+  } catch (err) {
+    hgBtn.textContent = "Σφάλμα: " + err.message;
+    setTimeout(() => { hgBtn.textContent = "⚡ Βρες τον Αριθμό"; }, 3000);
+  } finally {
+    hgBtn.disabled = false;
+    if (!hgBtn.textContent.startsWith("Σφάλμα"))
+      hgBtn.textContent = "⚡ Βρες τον Αριθμό";
+  }
+};
 
 /* ── Render balls ── */
 function renderBalls(nums) {
