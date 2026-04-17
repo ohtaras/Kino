@@ -174,27 +174,27 @@
 
     <!-- Holy Grail card -->
     <div class="card">
-      <div class="card-title">⚡ Άγιο Δισκοπότηρο — 1 Αριθμός</div>
+      <div class="card-title">⚡ Άγιο Δισκοπότηρο — <span id="hg-title-count">1</span> Αριθμός</div>
       <p style="color:var(--muted);font-size:.82rem;line-height:1.5;margin-bottom:14px;">
-        100 στρατηγικές ψηφίζουν τον <strong style="color:var(--text);">έναν</strong> αριθμό
-        με τη μεγαλύτερη πιθανότητα να βγει. Consensus voting — όχι εγγύηση.
+        100 στρατηγικές ψηφίζουν τους <strong id="hg-desc-count" style="color:var(--text);">1</strong>
+        αριθμούς με τη μεγαλύτερη πιθανότητα να βγουν. Consensus voting — όχι εγγύηση.
       </p>
       <div class="controls">
-        <button class="hg-btn" id="hg-btn">⚡ Βρες τον Αριθμό</button>
+        <button class="hg-btn" id="hg-btn">⚡ Βρες τους Αριθμούς</button>
       </div>
       <div id="hg-result-wrap" style="display:none;margin-top:20px;">
         <div class="hg-result">
           <div id="hg-draw-label" style="font-size:.78rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;"></div>
-          <div id="hg-ball" class="hg-ball b4"></div>
+          <div id="hg-balls-grid" class="numbers-grid" style="min-height:auto;margin:6px 0 8px;"></div>
           <div class="hg-votes">
-            <strong id="hg-vote-count"></strong> / 100 στρατηγικές συμφωνούν
+            Κορυφαίος ψηφοφόρος: <strong id="hg-vote-count"></strong> / 100 στρατηγικές
           </div>
           <div class="vote-bar-wrap">
             <div class="vote-bar" id="hg-vote-bar" style="width:0%"></div>
           </div>
-          <div class="hg-candidates" id="hg-candidates"></div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:6px;" id="hg-runner-up"></div>
           <div class="hg-disclaimer">
-            Πιθανότητα τύχης: 25% · Αυτό είναι ο «ισχυρότερος» αριθμός κατά consensus
+            Βασισμένο σε 100-στρατηγική consensus ψηφοφορία · Καμία εγγύηση αποτελέσματος
           </div>
         </div>
       </div>
@@ -299,8 +299,13 @@ tabBackBtn.onclick = () => switchTab("back");
 runBtLink.onclick  = e => { e.preventDefault(); switchTab("back"); };
 
 /* ── Count ── */
-btnMinus.onclick = () => { if (pickCount > 1)  { pickCount--; countDisp.textContent = pickCount; } };
-btnPlus.onclick  = () => { if (pickCount < 20) { pickCount++; countDisp.textContent = pickCount; } };
+function updateCountLabels() {
+  countDisp.textContent = pickCount;
+  document.getElementById("hg-title-count").textContent = pickCount;
+  document.getElementById("hg-desc-count").textContent  = pickCount;
+}
+btnMinus.onclick = () => { if (pickCount > 1)  { pickCount--; updateCountLabels(); } };
+btnPlus.onclick  = () => { if (pickCount < 20) { pickCount++; updateCountLabels(); } };
 
 /* ── Math helpers ── */
 function normalize(map) {
@@ -415,13 +420,11 @@ function analyzeDraws(draws) {
 /* ── Holy Grail DOM ── */
 const hgBtn        = document.getElementById("hg-btn");
 const hgResultWrap = document.getElementById("hg-result-wrap");
-const hgBall       = document.getElementById("hg-ball");
 const hgVoteCount  = document.getElementById("hg-vote-count");
 const hgVoteBar    = document.getElementById("hg-vote-bar");
-const hgCandidates = document.getElementById("hg-candidates");
 const hgDrawLabel  = document.getElementById("hg-draw-label");
 
-/* ── Holy Grail: 100-strategy consensus vote for 1 number ── */
+/* ── Holy Grail: 100-strategy consensus vote for pickCount numbers ── */
 hgBtn.onclick = async () => {
   hgBtn.disabled = true;
   hgBtn.textContent = "Ψηφίζουν…";
@@ -432,75 +435,77 @@ hgBtn.onclick = async () => {
     const draws = raw.map(parseNumbers).filter(Boolean);
     if (draws.length < 5) throw new Error("Ανεπαρκή δεδομένα");
 
+    const N      = pickCount;
     const nextId = getNextDrawId(raw);
     hgDrawLabel.textContent = nextId ? `Κλήρωση #${nextId}` : "";
 
-    /* Build all matrices once */
+    /* Build matrices once */
     const trans = buildTrans(draws);
     const cooc  = buildCooc(draws);
     const { freq, gap } = analyzeDraws(draws);
     const nFreq = normalize(freq);
     const nGap  = normalize(gap);
     const ctx   = draws[0];
-
-    /* Build lag matrices for each unique lag */
     const lagMats = {};
     for (const s of STRATEGIES)
       if (!lagMats[s.lag]) lagMats[s.lag] = buildLag(draws, s.lag);
 
-    /* Each strategy votes for its #1 number */
+    /* Each strategy votes for its top-N numbers */
     const votes = {};
     for (let n = 1; n <= 80; n++) votes[n] = 0;
 
     for (const s of STRATEGIES) {
-      const sT = normalize(scoreMatrix(trans,       ctx));
-      const sC = normalize(scoreMatrix(cooc,        ctx));
+      const sT = normalize(scoreMatrix(trans,          ctx));
+      const sC = normalize(scoreMatrix(cooc,           ctx));
       const sL = normalize(scoreMatrix(lagMats[s.lag], ctx));
       const sc = {};
       for (let n = 1; n <= 80; n++)
         sc[n] = s.wT*(sT[n]||0) + s.wC*(sC[n]||0) + s.wL*(sL[n]||0)
               + s.wF*(nFreq[n]||0) + s.wG*(nGap[n]||0);
-
-      /* Top-1 vote */
-      const winner = +Object.entries(sc).sort((a, b) => b[1] - a[1])[0][0];
-      votes[winner]++;
+      /* Cast N votes */
+      topN(sc, N).forEach(n => votes[n]++);
     }
 
-    /* Sort by votes */
+    /* Rank by votes */
     const ranked = Object.entries(votes)
       .map(([n, v]) => ({ n: +n, v }))
       .sort((a, b) => b.v - a.v);
 
-    const best = ranked[0];
-    const bc   = best.n <= 20 ? "b1" : best.n <= 40 ? "b2" : best.n <= 60 ? "b3" : "b4";
+    /* Selected = top-N by vote count */
+    const selected = ranked.slice(0, N);
+    const best     = selected[0];
+    const rest     = ranked.slice(N, N + 5); /* next candidates that didn't make cut */
 
-    /* Render winner ball */
-    hgBall.className = `hg-ball ${bc}`;
-    hgBall.textContent = best.n;
-    hgVoteCount.textContent = best.v;
-    hgVoteBar.style.width = best.v + "%";
-
-    /* Render top-5 candidates */
-    hgCandidates.innerHTML = "";
-    ranked.slice(0, 5).forEach((r, i) => {
-      const cls  = r.n <= 20 ? "b1" : r.n <= 40 ? "b2" : r.n <= 60 ? "b3" : "b4";
-      const div  = document.createElement("div");
-      div.className = "hg-cand";
-      div.innerHTML = `
-        <div class="mini-ball ${cls}" style="width:36px;height:36px;font-size:.82rem;">${r.n}</div>
-        <div class="cand-votes" style="font-size:.65rem;color:var(--muted);">${r.v} ψήφοι</div>`;
-      hgCandidates.appendChild(div);
+    /* Render winner balls */
+    const hgBallsGrid = document.getElementById("hg-balls-grid");
+    hgBallsGrid.innerHTML = "";
+    selected.forEach((r, i) => {
+      const cls = r.n <= 20 ? "b1" : r.n <= 40 ? "b2" : r.n <= 60 ? "b3" : "b4";
+      const b   = document.createElement("div");
+      b.className = `num-ball ${cls}`;
+      b.textContent = r.n;
+      b.style.animationDelay = `${i * 60}ms`;
+      hgBallsGrid.appendChild(b);
     });
+
+    hgVoteCount.textContent = best.v;
+    hgVoteBar.style.width   = best.v + "%";
+
+    /* Show next 5 runners-up */
+    const runnerUp = document.getElementById("hg-runner-up");
+    runnerUp.textContent = rest.length
+      ? "Επόμενοι: " + rest.map(r => `${r.n}(${r.v})`).join(", ")
+      : "";
 
     hgResultWrap.style.display = "";
 
   } catch (err) {
     hgBtn.textContent = "Σφάλμα: " + err.message;
-    setTimeout(() => { hgBtn.textContent = "⚡ Βρες τον Αριθμό"; }, 3000);
+    setTimeout(() => { hgBtn.textContent = "⚡ Βρες τους Αριθμούς"; }, 3000);
   } finally {
     hgBtn.disabled = false;
     if (!hgBtn.textContent.startsWith("Σφάλμα"))
-      hgBtn.textContent = "⚡ Βρες τον Αριθμό";
+      hgBtn.textContent = "⚡ Βρες τους Αριθμούς";
   }
 };
 
