@@ -24,28 +24,26 @@ except Exception:
 
 app = Flask(__name__)
 
-CONFIG_FILE = "config.json"
-POLL_INTERVAL  = 315   # seconds between Kino draws
-FIRST_DRAW_SEC = 15    # first draw at 00:00:15 Greek time
-POLL_BUFFER    = 8     # seconds to wait after scheduled draw before polling OPAP
+CONFIG_FILE       = "config.json"
+DRAW_INTERVAL_SEC = 300   # draws every 5 minutes exactly
+DRAW_OFFSET_SEC   = 15    # +15 seconds after each 5-minute mark
+POLL_BUFFER       = 8     # extra seconds after draw before polling OPAP
 
 
 def next_draw_epoch(after_epoch=None):
-    """Return the Unix epoch of the next scheduled Kino draw (Greek time)."""
+    """Return Unix epoch of next Kino draw: every 5min at :15s (Greek time)."""
     if after_epoch is None:
         after_epoch = time.time()
     ref      = datetime.fromtimestamp(after_epoch, tz=_TZ)
     midnight = ref.replace(hour=0, minute=0, second=0, microsecond=0)
     t        = (ref - midnight).total_seconds()
 
-    if t < FIRST_DRAW_SEC:
-        draw_secs = FIRST_DRAW_SEC
-    else:
-        idx       = math.floor((t - FIRST_DRAW_SEC) / POLL_INTERVAL) + 1
-        draw_secs = FIRST_DRAW_SEC + idx * POLL_INTERVAL
+    block      = math.floor(t / DRAW_INTERVAL_SEC) * DRAW_INTERVAL_SEC
+    draw_this  = block + DRAW_OFFSET_SEC
+    draw_secs  = draw_this if draw_this > t else block + DRAW_INTERVAL_SEC + DRAW_OFFSET_SEC
 
     if draw_secs >= 86400:
-        midnight += timedelta(days=1)
+        midnight  += timedelta(days=1)
         draw_secs -= 86400
 
     return (midnight + timedelta(seconds=draw_secs)).timestamp()
@@ -344,6 +342,8 @@ def api_config_post():
 def api_start():
     state["running"] = True
     add_log("info", "▶️ Monitor ξεκίνησε.")
+    # Fetch immediately without waiting for the scheduler
+    threading.Thread(target=tick, daemon=True).start()
     return jsonify({"ok": True})
 
 
