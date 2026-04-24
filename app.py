@@ -5,6 +5,7 @@ Runs 24/7 on Railway.
 """
 
 import json
+import math
 import os
 import threading
 import time
@@ -24,7 +25,30 @@ except Exception:
 app = Flask(__name__)
 
 CONFIG_FILE = "config.json"
-POLL_INTERVAL = 315
+POLL_INTERVAL  = 315   # seconds between Kino draws
+FIRST_DRAW_SEC = 15    # first draw at 00:00:15 Greek time
+POLL_BUFFER    = 8     # seconds to wait after scheduled draw before polling OPAP
+
+
+def next_draw_epoch(after_epoch=None):
+    """Return the Unix epoch of the next scheduled Kino draw (Greek time)."""
+    if after_epoch is None:
+        after_epoch = time.time()
+    ref      = datetime.fromtimestamp(after_epoch, tz=_TZ)
+    midnight = ref.replace(hour=0, minute=0, second=0, microsecond=0)
+    t        = (ref - midnight).total_seconds()
+
+    if t < FIRST_DRAW_SEC:
+        draw_secs = FIRST_DRAW_SEC
+    else:
+        idx       = math.floor((t - FIRST_DRAW_SEC) / POLL_INTERVAL) + 1
+        draw_secs = FIRST_DRAW_SEC + idx * POLL_INTERVAL
+
+    if draw_secs >= 86400:
+        midnight += timedelta(days=1)
+        draw_secs -= 86400
+
+    return (midnight + timedelta(seconds=draw_secs)).timestamp()
 
 DEFAULT_RULES = [
     {"id": "rule1",  "name": "ΚΑΝΟΝΑΣ 1 (Οριζόντιο)",  "trigger": [0,1,2,3],        "offsets": [0,1,2,3,10,11],   "duration": 4, "enabled": True},
@@ -261,16 +285,22 @@ def tick():
             })
 
 
-# ── Background scheduler ──
+# ── Background scheduler (synchronized to Kino draw schedule) ──
 def scheduler_loop():
     while True:
         try:
             tick()
         except Exception as e:
             add_log("error", f"Scheduler: {e}")
+
+        # Calculate the next draw epoch and set countdown
+        nxt = next_draw_epoch() + POLL_BUFFER
         with _lock:
-            state["nextTickAt"] = time.time() + POLL_INTERVAL
-        time.sleep(POLL_INTERVAL)
+            state["nextTickAt"] = nxt
+
+        sleep_secs = max(10, nxt - time.time())
+        add_log("info", f"⏳ Επόμενη ανανέωση σε {int(sleep_secs//60)}λ {int(sleep_secs%60)}δ.")
+        time.sleep(sleep_secs)
 
 
 threading.Thread(target=scheduler_loop, daemon=True).start()
@@ -285,10 +315,12 @@ def index():
 @app.route("/api/status")
 def api_status():
     with _lock:
+        # Always compute next draw time so countdown works even before start
+        nxt = state["nextTickAt"] or (next_draw_epoch() + POLL_BUFFER)
         return jsonify({
             "running":    state["running"],
             "lastDraw":   state["lastDraw"],
-            "nextTickAt": state["nextTickAt"],
+            "nextTickAt": nxt,
         })
 
 

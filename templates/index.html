@@ -353,11 +353,12 @@ function updateGrid(drawnNums, triggerNums, suggestNums) {
 /* ══ Countdown ══ */
 function updateCountdown() {
   const el = document.getElementById("countdown");
-  if (!nextTickAt || !isRunning) { el.textContent = "--:--"; return; }
+  if (!nextTickAt) { el.textContent = "--:--"; return; }
   const diff = Math.max(0, Math.round(nextTickAt - Date.now()/1000));
   const m = String(Math.floor(diff/60)).padStart(2,"0");
   const s = String(diff%60).padStart(2,"0");
   el.textContent = m+":"+s;
+  el.style.color = diff < 30 ? "#f87171" : "#facc15";
 }
 
 /* ══ Run button ══ */
