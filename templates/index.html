@@ -189,6 +189,7 @@
     <button class="tab-btn" data-tab="signals"><span class="t-icon">🚨</span><span>Σήματα</span><span class="tab-badge" id="sig-badge" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="log"><span class="t-icon">📋</span><span>Log</span></button>
     <button class="tab-btn" data-tab="backtest"><span class="t-icon">🔬</span><span>Ανάλυση</span></button>
+    <button class="tab-btn" data-tab="reverse"><span class="t-icon">🔄</span><span>Αντίστροφη</span></button>
   </nav>
 
   <!-- ═══ DASHBOARD ═══ -->
@@ -320,6 +321,40 @@
 
   </main>
 
+  <!-- ═══ ΑΝΤΙΣΤΡΟΦΗ ═══ -->
+  <main id="tab-reverse" style="display:none;">
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card-title">🔄 Αντίστροφη Μηχανική — Ανακάλυψη Κανόνων</div>
+      <p style="font-size:.72rem;color:#9ca3af;line-height:1.6;">
+        Ψάχνει σε <strong style="color:#f9fafb;">100 ζεύγη διαδοχικών κληρώσεων</strong>.
+        Για κάθε ζεύγος βρίσκει όλα τα pattern (trigger στην προηγούμενη, πρόταση στην τρέχουσα)
+        που μοιράζονται κοινό root. Επιστρέφει τα <strong style="color:#facc15;">5 πιο συχνά</strong>.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="rule-field">
+          <label>Ελάχ. μέγεθος πρότασης</label>
+          <input type="number" id="rv-minsugg" value="4" min="2" max="8"
+            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
+        </div>
+        <div class="rule-field">
+          <label>Ελάχ. μέγεθος trigger</label>
+          <input type="number" id="rv-mintrig" value="2" min="1" max="6"
+            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
+        </div>
+        <div class="rule-field">
+          <label>Εύρος offset (0–Ν)</label>
+          <input type="number" id="rv-range" value="19" min="5" max="49"
+            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
+        </div>
+        <div class="rule-field" style="display:flex;align-items:flex-end;">
+          <p style="font-size:.63rem;color:#6b7280;line-height:1.5;">Τα αποτελέσματα μπορούν να αντιγραφούν στην καρτέλα Ανάλυση.</p>
+        </div>
+      </div>
+      <button class="btn btn-blue" id="rv-run-btn">🔍 Αναζήτηση Top-5 Κανόνων</button>
+    </div>
+    <div id="rv-results" style="display:none;flex-direction:column;gap:10px;"></div>
+  </main>
+
   <footer>KINO Monitor · api.opap.gr · Greece Time</footer>
 </div>
 <script>
@@ -328,7 +363,7 @@ let cfg = null, isRunning = false, signalsData = [], activeTab = "dashboard";
 let lastDraw = null, nextTickAt = null;
 
 /* ══ Tabs ══ */
-const ALL_TABS = ["dashboard","rules","telegram","signals","log","backtest"];
+const ALL_TABS = ["dashboard","rules","telegram","signals","log","backtest","reverse"];
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeTab = btn.dataset.tab;
@@ -771,6 +806,104 @@ document.getElementById("bt-load-btn").addEventListener("click", async () => {
     btn.textContent="🔬 Ανάλυση Χειροκίνητου Κανόνα"; btn.disabled=false;
   }
 });
+
+/* ══ ΑΝΤΙΣΤΡΟΦΗ ΜΗΧΑΝΙΚΗ ══ */
+document.getElementById("rv-run-btn").addEventListener("click", async () => {
+  const btn    = document.getElementById("rv-run-btn");
+  const rvRes  = document.getElementById("rv-results");
+  btn.textContent = "Αναζητεί…"; btn.disabled = true;
+  rvRes.innerHTML = ""; rvRes.style.display = "flex";
+
+  try {
+    const minSugg  = Math.max(2, parseInt(document.getElementById("rv-minsugg").value)||4);
+    const minTrig  = Math.max(1, parseInt(document.getElementById("rv-mintrig").value)||2);
+    const offRange = Math.max(5, parseInt(document.getElementById("rv-range").value)||19);
+
+    const draws = await fetchDrawsSorted(); // oldest → newest
+    if (draws.length < 2) { rvRes.innerHTML='<div class="bt-empty">Ανεπαρκείς κληρώσεις</div>'; return; }
+
+    // Count (triggerOffs, suggOffs) patterns across all consecutive pairs
+    const counts = {};
+
+    for (let i = 1; i < draws.length; i++) {
+      const prevSet = new Set(draws[i-1].numbers);
+      const currSet = new Set(draws[i].numbers);
+
+      for (let root = 1; root <= 80; root++) {
+        const tOffs = [], sOffs = [];
+        for (let o = 0; o <= offRange; o++) {
+          const n = root + o;
+          if (n > 80) break;
+          if (prevSet.has(n)) tOffs.push(o);
+          if (currSet.has(n)) sOffs.push(o);
+        }
+        if (tOffs.length < minTrig || sOffs.length < minSugg) continue;
+
+        const key = tOffs.join(",") + "|" + sOffs.join(",");
+        if (!counts[key]) {
+          counts[key] = {trigger: [...tOffs], suggestion: [...sOffs], count: 0, examples: []};
+        }
+        counts[key].count++;
+        if (counts[key].examples.length < 2) {
+          counts[key].examples.push({root, prev: draws[i-1].drawNo, curr: draws[i].drawNo});
+        }
+      }
+    }
+
+    const top5 = Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,5);
+
+    if (!top5.length) {
+      rvRes.innerHTML='<div class="bt-empty">Δεν βρέθηκαν patterns με τα επιλεγμένα κριτήρια</div>'; return;
+    }
+
+    top5.forEach((p, rank) => {
+      const exHtml = p.examples.map(e =>
+        `<span style="font-size:.62rem;background:#1f2937;border-radius:4px;padding:2px 6px;color:#9ca3af;">root=${e.root} · #${e.prev}→#${e.curr}</span>`
+      ).join(" ");
+
+      const trigStr = p.trigger.join(",");
+      const suggStr = p.suggestion.join(",");
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:.8rem;font-weight:700;color:#facc15;">#${rank+1} — ${p.count} εμφανίσεις</span>
+          <button onclick="useInBacktest('${trigStr}','${suggStr}')"
+            style="background:#1d4ed8;border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:.65rem;font-weight:700;cursor:pointer;">
+            → Ανάλυση
+          </button>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+          <div>
+            <div style="font-size:.6rem;color:#f59e0b;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Trigger (προηγούμενη)</div>
+            <div style="font-size:.75rem;font-weight:700;color:#f59e0b;font-family:monospace;">[${trigStr}]</div>
+            <div style="font-size:.62rem;color:#6b7280;">${p.trigger.length} αριθμοί</div>
+          </div>
+          <div style="color:#374151;align-self:center;font-size:1.2rem;">→</div>
+          <div>
+            <div style="font-size:.6rem;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Πρόταση (τρέχουσα)</div>
+            <div style="font-size:.75rem;font-weight:700;color:#22c55e;font-family:monospace;">[${suggStr}]</div>
+            <div style="font-size:.62rem;color:#6b7280;">${p.suggestion.length} αριθμοί</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">${exHtml}</div>`;
+      rvRes.appendChild(card);
+    });
+
+  } catch(e) {
+    rvRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
+  } finally {
+    btn.textContent="🔍 Αναζήτηση Top-5 Κανόνων"; btn.disabled=false;
+  }
+});
+
+function useInBacktest(trigStr, suggStr) {
+  document.getElementById("bt-trigger").value = trigStr;
+  document.getElementById("bt-offsets").value = suggStr;
+  // Switch to backtest tab
+  document.querySelector('[data-tab="backtest"]').click();
+}
 
 /* ══ Init ══ */
 async function init() {
