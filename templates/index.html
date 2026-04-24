@@ -1,396 +1,573 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kino Predictor — Allwyn</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>KINO Monitor</title>
   <style>
-    :root {
-      --bg:      #0d1117;
-      --card:    #161b22;
-      --border:  #30363d;
-      --accent:  #f0a500;
-      --accent2: #e05c00;
-      --text:    #e6edf3;
-      --muted:   #8b949e;
-      --green:   #3fb950;
-      --red:     #f85149;
-      --blue:    #58a6ff;
-    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#030712;color:#f9fafb;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+    .app{width:100%;max-width:640px;display:flex;flex-direction:column;min-height:100vh;}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Header */
+    .header{position:sticky;top:0;z-index:20;background:#030712;border-bottom:1px solid #1f2937;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+    .logo{display:flex;align-items:center;gap:10px;}
+    .logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .logo-text h1{font-size:.95rem;font-weight:700;color:#f9fafb;}
+    .logo-text p{font-size:.72rem;color:#6b7280;}
+    .header-right{display:flex;align-items:center;gap:8px;}
+    select.game-sel{background:#1f2937;border:1px solid #374151;color:#f9fafb;font-size:.75rem;border-radius:8px;padding:6px 8px;outline:none;}
+    .start-btn{padding:6px 14px;border-radius:8px;font-size:.75rem;font-weight:700;border:none;cursor:pointer;transition:background .15s;}
+    .start-btn.on{background:#dc2626;color:#fff;}
+    .start-btn.off{background:#16a34a;color:#fff;}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+    /* Tabs */
+    .tabs{display:flex;border-bottom:1px solid #1f2937;background:#030712;position:sticky;top:61px;z-index:10;}
+    .tab-btn{flex:1;padding:10px 4px;background:none;border:none;color:#6b7280;font-size:.7rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;}
+    .tab-btn .t-icon{font-size:1.1rem;}
+    .tab-btn:hover{color:#d1d5db;}
+    .tab-btn.active{color:#60a5fa;border-bottom-color:#60a5fa;}
+    .tab-badge{position:absolute;top:6px;right:calc(50% - 16px);background:#ef4444;color:#fff;font-size:.55rem;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-weight:800;}
 
-    /* ── Header ── */
-    header {
-      width: 100%;
-      background: linear-gradient(135deg, #1a0a00 0%, #2a1200 50%, #1a0a00 100%);
-      border-bottom: 2px solid var(--accent);
-      padding: 24px 16px 20px;
-      text-align: center;
-    }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: var(--accent);
-      text-shadow: 0 0 20px rgba(240,165,0,0.4);
-    }
-    header p {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
+    /* Main */
+    main{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;padding-bottom:32px;}
 
-    /* ── Main container ── */
-    main {
-      width: 100%;
-      max-width: 720px;
-      padding: 32px 16px 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
-    }
+    /* Cards */
+    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:16px;}
+    .card-title{font-size:.7rem;font-weight:700;letter-spacing:1.5px;color:#6b7280;text-transform:uppercase;margin-bottom:12px;}
 
-    /* ── Card ── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 28px 24px;
-    }
-    .card-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 18px;
-    }
+    /* Status bar */
+    .status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .status-dot.running{background:#22c55e;box-shadow:0 0 8px #22c55e;}
+    .status-dot.stopped{background:#6b7280;}
+    .status-text{font-size:.85rem;font-weight:600;}
+    .draw-pill{background:#1f2937;border-radius:20px;padding:4px 10px;font-size:.72rem;color:#9ca3af;}
+    .draw-pill span{color:#60a5fa;font-weight:700;}
 
-    /* ── Controls ── */
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .label {
-      font-size: 0.9rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .count-control {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .count-btn {
-      background: #21262d;
-      border: none;
-      color: var(--text);
-      font-size: 1.2rem;
-      width: 36px;
-      height: 36px;
-      cursor: pointer;
-      transition: background 0.15s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .count-btn:hover { background: #30363d; }
-    .count-display {
-      background: #0d1117;
-      color: var(--accent);
-      font-weight: 700;
-      font-size: 1.1rem;
-      width: 44px;
-      text-align: center;
-      height: 36px;
-      line-height: 36px;
-      border-left: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-    }
-    .predict-btn {
-      flex: 1;
-      min-width: 160px;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      color: #000;
-      font-weight: 800;
-      font-size: 1rem;
-      letter-spacing: 1px;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 24px;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-      text-transform: uppercase;
-    }
-    .predict-btn:hover  { opacity: 0.9; }
-    .predict-btn:active { transform: scale(0.97); }
-    .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Number balls */
+    .balls-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .ball{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;}
+    .ball.r1{background:radial-gradient(circle at 35% 35%,#f97316,#c2410c);color:#fff;}
+    .ball.r2{background:radial-gradient(circle at 35% 35%,#facc15,#d97706);color:#000;}
+    .ball.r3{background:radial-gradient(circle at 35% 35%,#67e8f9,#0891b2);color:#000;}
+    .ball.r4{background:radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed);color:#fff;}
 
-    /* ── Numbers grid ── */
-    .numbers-section { text-align: center; }
-    .numbers-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      margin: 8px 0 20px;
-      min-height: 72px;
-      align-items: center;
-    }
-    .num-ball {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-      font-weight: 800;
-      position: relative;
-      cursor: default;
-      animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) both;
-    }
-    @keyframes popIn {
-      from { transform: scale(0) rotate(-30deg); opacity: 0; }
-      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
-    }
-    /* Colour by range */
-    .ball-1-20  { background: radial-gradient(circle at 35% 35%, #ff9f43, #e05c00); color: #fff; box-shadow: 0 4px 16px rgba(224,92,0,0.4); }
-    .ball-21-40 { background: radial-gradient(circle at 35% 35%, #ffd32a, #f0a500); color: #000; box-shadow: 0 4px 16px rgba(240,165,0,0.4); }
-    .ball-41-60 { background: radial-gradient(circle at 35% 35%, #67e8f9, #0ea5e9); color: #000; box-shadow: 0 4px 16px rgba(14,165,233,0.4); }
-    .ball-61-80 { background: radial-gradient(circle at 35% 35%, #a78bfa, #7c3aed); color: #fff; box-shadow: 0 4px 16px rgba(124,58,237,0.4); }
+    /* Grid stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .stat-box{background:#1f2937;border-radius:12px;padding:12px;text-align:center;}
+    .stat-box .num{font-size:1.6rem;font-weight:800;}
+    .stat-box .lbl{font-size:.68rem;color:#6b7280;margin-top:2px;}
+    .blue{color:#60a5fa;} .green{color:#4ade80;} .purple{color:#c084fc;}
 
-    .numbers-row {
-      color: var(--muted);
-      font-size: 0.85rem;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-    .numbers-row span { color: var(--accent); font-weight: 700; }
+    /* Buttons */
+    .btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;font-size:.82rem;font-weight:700;border:none;cursor:pointer;transition:opacity .15s,transform .1s;width:100%;}
+    .btn:hover{opacity:.88;} .btn:active{transform:scale(.97);}
+    .btn-ghost{background:#1f2937;color:#d1d5db;border:1px solid #374151;}
+    .btn-blue{background:#2563eb;color:#fff;}
+    .btn-red{background:#dc2626;color:#fff;}
 
-    /* ── Method badge ── */
-    .method-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #21262d;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 14px;
-    }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    /* Schedule info */
+    .schedule-box{background:#111827;border:1px solid #374151;border-radius:12px;padding:14px;}
+    .schedule-box p{font-size:.78rem;color:#9ca3af;line-height:1.5;}
+    .schedule-box .highlight{color:#facc15;font-family:monospace;}
+    .times-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+    .time-pill{background:#1f2937;border-radius:6px;padding:5px;text-align:center;font-family:monospace;font-size:.7rem;color:#9ca3af;}
 
-    /* ── Stats ── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 16px;
-    }
-    .stat-group h3 {
-      font-size: 0.72rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .hot-title   { color: var(--red); }
-    .cold-title  { color: var(--blue); }
-    .over-title  { color: #f59e0b; }
+    /* Rules */
+    .rule-card{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+    .rule-header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .rule-name{font-size:.82rem;font-weight:700;color:#f9fafb;}
+    .toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#374151;border-radius:24px;transition:.2s;}
+    .toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+    .toggle input:checked+.toggle-slider{background:#2563eb;}
+    .toggle input:checked+.toggle-slider:before{transform:translateX(18px);}
+    .rule-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .rule-field label{font-size:.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;}
+    .rule-field input{width:100%;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;outline:none;}
+    .rule-field input:focus{border-color:#3b82f6;}
+    .rule-field.full{grid-column:1/-1;}
 
-    .mini-balls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .mini-ball {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
+    /* Telegram */
+    .tg-section{display:flex;flex-direction:column;gap:12px;}
+    .tg-field label{font-size:.7rem;color:#6b7280;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
+    .tg-field input{width:100%;background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:8px;padding:10px 12px;font-size:.82rem;outline:none;}
+    .tg-field input:focus{border-color:#3b82f6;}
+    .tg-target{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;}
+    .tg-target-row{display:flex;align-items:center;gap:8px;}
+    .tg-target-row input{flex:1;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;outline:none;}
+    .tg-target-row input:focus{border-color:#3b82f6;}
+    .del-btn{background:#374151;border:none;color:#ef4444;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;}
+    .add-btn{background:none;border:1px dashed #374151;color:#6b7280;border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;width:100%;transition:border-color .15s,color .15s;}
+    .add-btn:hover{border-color:#3b82f6;color:#60a5fa;}
+    .info-box{background:#1e3a5f;border:1px solid #1d4ed8;border-radius:10px;padding:12px;font-size:.75rem;color:#93c5fd;line-height:1.5;}
+    .info-box a{color:#60a5fa;}
 
-    /* ── Spinner ── */
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 16px auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Signals */
+    .signal-card{background:#1f2937;border-left:3px solid #22c55e;border-radius:0 10px 10px 0;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .signal-info .rule-nm{font-size:.8rem;font-weight:700;color:#facc15;}
+    .signal-info .meta{font-size:.68rem;color:#6b7280;margin-top:2px;}
+    .signal-balls{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+    .sball{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;}
+    .sent-to{font-size:.65rem;color:#4ade80;margin-top:4px;}
 
-    /* ── Footer ── */
-    footer {
-      color: var(--muted);
-      font-size: 0.75rem;
-      text-align: center;
-      padding: 0 16px 24px;
-    }
+    /* Log */
+    .log-entry{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #1f2937;font-size:.75rem;}
+    .log-entry:last-child{border-bottom:none;}
+    .log-ts{color:#4b5563;white-space:nowrap;font-family:monospace;}
+    .log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+    .log-dot.info{background:#3b82f6;} .log-dot.success{background:#22c55e;}
+    .log-dot.error{background:#ef4444;} .log-dot.warning{background:#f59e0b;}
+    .log-msg{color:#d1d5db;line-height:1.4;}
+
+    /* Empty state */
+    .empty{text-align:center;padding:32px 16px;color:#4b5563;font-size:.85rem;}
+
+    /* Save bar */
+    .save-bar{position:fixed;bottom:0;left:0;right:0;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:.82rem;z-index:100;transform:translateY(100%);transition:transform .25s;}
+    .save-bar.visible{transform:translateY(0);}
+    .save-bar button{background:#fff;color:#1d4ed8;border:none;border-radius:6px;padding:6px 14px;font-weight:700;cursor:pointer;font-size:.78rem;}
+
+    footer{color:#374151;font-size:.68rem;text-align:center;padding:8px 16px 16px;}
   </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <h1>KINO PREDICTOR</h1>
-  <p>Allwyn.gr &mdash; Στατιστική Ανάλυση</p>
-</header>
-
-<main>
-
-  <!-- Controls -->
-  <div class="card">
-    <div class="card-title">Ρυθμίσεις Πρόβλεψης</div>
-    <div class="controls">
-      <span class="label">Αριθμοί:</span>
-      <div class="count-control">
-        <button class="count-btn" id="btn-minus">−</button>
-        <div class="count-display" id="count-display">9</div>
-        <button class="count-btn" id="btn-plus">+</button>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🎱</div>
+      <div class="logo-text">
+        <h1>KINO Monitor</h1>
+        <p>OPAP · Telegram Bot</p>
       </div>
-      <button class="predict-btn" id="predict-btn">Κάνε Πρόβλεψη</button>
     </div>
-  </div>
-
-  <!-- Results -->
-  <div class="card numbers-section" id="result-card">
-    <div class="card-title">Επόμενη Κλήρωση</div>
-    <div class="numbers-grid" id="numbers-grid">
-      <span style="color:var(--muted);font-size:0.9rem;">Πάτησε «Κάνε Πρόβλεψη» για να δεις τους αριθμούς</span>
+    <div class="header-right">
+      <select class="game-sel" id="game-sel">
+        <option value="1100">Kino</option>
+        <option value="5103">Lotto</option>
+        <option value="5104">Joker</option>
+        <option value="2100">Super 3</option>
+        <option value="5106">Extra 5</option>
+      </select>
+      <button class="start-btn off" id="start-btn">▶ Start</button>
     </div>
-    <div id="numbers-row" class="numbers-row"></div>
-    <div id="method-badge" style="display:none" class="method-badge">
-      <span class="dot"></span>
-      <span id="method-text"></span>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard"><span class="t-icon">📊</span><span>Πίνακας</span></button>
+    <button class="tab-btn" data-tab="rules"><span class="t-icon">📐</span><span>Κανόνες</span></button>
+    <button class="tab-btn" data-tab="telegram"><span class="t-icon">📨</span><span>Telegram</span></button>
+    <button class="tab-btn" data-tab="signals"><span class="t-icon">🚨</span><span>Σήματα</span><span class="tab-badge" id="sig-badge" style="display:none">0</span></button>
+    <button class="tab-btn" data-tab="log"><span class="t-icon">📋</span><span>Log</span></button>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <main id="tab-dashboard">
+    <div class="card">
+      <div class="card-title">Κατάσταση</div>
+      <div class="status-row">
+        <div class="status-dot stopped" id="status-dot"></div>
+        <span class="status-text" id="status-text">Ανενεργό</span>
+        <div class="draw-pill">Κλήρωση <span id="draw-no">—</span></div>
+        <div class="draw-pill" id="draw-time"></div>
+      </div>
+      <div class="balls-wrap" id="balls-wrap">
+        <span style="color:#4b5563;font-size:.78rem;">Δεν υπάρχουν δεδομένα ακόμα</span>
+      </div>
     </div>
-  </div>
 
-  <!-- Stats -->
-  <div class="card" id="stats-card" style="display:none">
-    <div class="card-title">Στατιστικά (1801 κληρώσεις)</div>
-    <div class="stats-grid" id="stats-grid"></div>
-  </div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="num blue" id="sig-count">0</div><div class="lbl">Σήματα</div></div>
+      <div class="stat-box"><div class="num green" id="rules-count">0</div><div class="lbl">Κανόνες</div></div>
+      <div class="stat-box"><div class="num purple" id="targets-count">0</div><div class="lbl">Targets</div></div>
+    </div>
 
-</main>
+    <button class="btn btn-ghost" id="manual-check-btn">🔍 Χειροκίνητος Έλεγχος Τώρα</button>
 
-<footer>
-  Το Kino είναι τυχαίο παιχνίδι &mdash; καμία εγγύηση αποτελέσματος.
-</footer>
+    <div class="schedule-box">
+      <p>⏱ Κύκλος κάθε <span class="highlight">5 λεπτά και 15 δευτερόλεπτα</span></p>
+      <div class="times-grid">
+        <div class="time-pill">00:00:15</div><div class="time-pill">00:05:15</div>
+        <div class="time-pill">00:10:15</div><div class="time-pill">00:15:15</div>
+        <div class="time-pill">00:20:15</div><div class="time-pill">…</div>
+      </div>
+    </div>
+
+    <div id="recent-signals" style="display:none;">
+      <p style="font-size:.78rem;color:#6b7280;margin-bottom:8px;">🚨 Τελευταία Σήματα</p>
+      <div id="recent-signals-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </main>
+
+  <!-- RULES -->
+  <main id="tab-rules" style="display:none;">
+    <div class="card">
+      <p style="font-size:.75rem;color:#9ca3af;line-height:1.5;">
+        💡 Κάθε κανόνας ορίζει <span style="color:#facc15;">offsets trigger</span> (pattern στα αποτελέσματα)
+        και <span style="color:#4ade80;">offsets πρότασης</span>. Εφαρμόζεται για κάθε root 1–80.
+      </p>
+    </div>
+    <div id="rules-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <button class="btn btn-blue" id="save-rules-btn">💾 Αποθήκευση Κανόνων</button>
+  </main>
+
+  <!-- TELEGRAM -->
+  <main id="tab-telegram" style="display:none;">
+    <div class="info-box">
+      💡 Χρησιμοποίησε <a href="https://t.me/BotFather" target="_blank">@BotFather</a> για bot token.
+      Για Chat ID χρησιμοποίησε <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.
+      Μπορείς να προσθέσεις πολλαπλά targets (groups, channels, άτομα).
+    </div>
+    <div class="card tg-section">
+      <div class="card-title">Bot Token</div>
+      <div class="tg-field">
+        <label>Telegram Bot Token</label>
+        <input type="password" id="tg-token" placeholder="123456:ABC-DEF1234…"/>
+      </div>
+    </div>
+    <div class="card tg-section">
+      <div class="card-title">Targets (Groups / Channels / Άτομα)</div>
+      <div id="targets-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="add-btn" id="add-target-btn">+ Προσθήκη Target</button>
+    </div>
+    <button class="btn btn-blue" id="save-tg-btn">💾 Αποθήκευση Telegram</button>
+  </main>
+
+  <!-- SIGNALS -->
+  <main id="tab-signals" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-size:.82rem;color:#9ca3af;">🚨 Σήματα</span>
+      <button class="btn btn-ghost" style="width:auto;padding:5px 12px;font-size:.72rem;" id="clear-sigs-btn">Καθαρισμός</button>
+    </div>
+    <div id="signals-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </main>
+
+  <!-- LOG -->
+  <main id="tab-log" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-size:.82rem;color:#9ca3af;">📋 Activity Log</span>
+      <button class="btn btn-ghost" style="width:auto;padding:5px 12px;font-size:.72rem;" id="clear-logs-btn">Καθαρισμός</button>
+    </div>
+    <div class="card" style="padding:8px 14px;">
+      <div id="log-list" style="display:flex;flex-direction:column;"></div>
+    </div>
+  </main>
+
+  <footer>KINO OPAP Monitor · Κύκλος κάθε 5:15 · api.opap.gr</footer>
+</div>
 
 <script>
-  let count = 9;
+/* ════════ State ════════ */
+let cfg = null;
+let isRunning = false;
+let signals   = [];
+let activeTab = "dashboard";
 
-  const countDisplay = document.getElementById("count-display");
-  const btnMinus     = document.getElementById("btn-minus");
-  const btnPlus      = document.getElementById("btn-plus");
-  const predictBtn   = document.getElementById("predict-btn");
-  const numbersGrid  = document.getElementById("numbers-grid");
-  const numbersRow   = document.getElementById("numbers-row");
-  const methodBadge  = document.getElementById("method-badge");
-  const methodText   = document.getElementById("method-text");
-  const statsCard    = document.getElementById("stats-card");
-  const statsGrid    = document.getElementById("stats-grid");
-
-  btnMinus.addEventListener("click", () => { if (count > 1)  { count--; countDisplay.textContent = count; } });
-  btnPlus.addEventListener("click",  () => { if (count < 20) { count++; countDisplay.textContent = count; } });
-
-  function ballClass(n) {
-    if (n <= 20) return "ball-1-20";
-    if (n <= 40) return "ball-21-40";
-    if (n <= 60) return "ball-41-60";
-    return "ball-61-80";
-  }
-
-  function renderNumbers(numbers) {
-    numbersGrid.innerHTML = "";
-    numbers.forEach((n, i) => {
-      const ball = document.createElement("div");
-      ball.className = `num-ball ${ballClass(n)}`;
-      ball.textContent = n;
-      ball.style.animationDelay = `${i * 80}ms`;
-      numbersGrid.appendChild(ball);
+/* ════════ Tabs ════════ */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    ["dashboard","rules","telegram","signals","log"].forEach(t => {
+      document.getElementById("tab-"+t).style.display = t === activeTab ? "" : "none";
     });
-    numbersRow.innerHTML = `<span>${numbers.join(" — ")}</span>`;
-  }
+    if (activeTab === "rules")    renderRules();
+    if (activeTab === "telegram") renderTelegram();
+    if (activeTab === "signals")  renderSignals();
+    if (activeTab === "log")      fetchLogs();
+  });
+});
 
-  function renderStats(stats) {
-    if (!stats || (!stats.hot && !stats.cold && !stats.overdue)) {
-      statsCard.style.display = "none";
-      return;
+/* ════════ Helpers ════════ */
+function ballCls(n) { return n<=20?"r1":n<=40?"r2":n<=60?"r3":"r4"; }
+
+function renderBalls(numbers, container, size=32) {
+  container.innerHTML = "";
+  numbers.forEach(n => {
+    const b = document.createElement("div");
+    b.className = `ball ${ballCls(n)}`;
+    b.style.cssText = `width:${size}px;height:${size}px;font-size:${size*.23}rem`;
+    b.textContent = n;
+    container.appendChild(b);
+  });
+}
+
+/* ════════ Start / Stop ════════ */
+const startBtn = document.getElementById("start-btn");
+startBtn.addEventListener("click", async () => {
+  const endpoint = isRunning ? "/api/stop" : "/api/start";
+  await fetch(endpoint, {method:"POST"});
+  await fetchStatus();
+});
+
+/* ════════ Game selector ════════ */
+document.getElementById("game-sel").addEventListener("change", async e => {
+  cfg.gameId = e.target.value;
+  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({gameId:cfg.gameId})});
+});
+
+/* ════════ Manual check ════════ */
+document.getElementById("manual-check-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("manual-check-btn");
+  btn.textContent = "Ελέγχει…"; btn.disabled = true;
+  await fetch("/api/check", {method:"POST"});
+  await fetchStatus();
+  await fetchLogs();
+  btn.textContent = "🔍 Χειροκίνητος Έλεγχος Τώρα"; btn.disabled = false;
+});
+
+/* ════════ Status polling ════════ */
+async function fetchStatus() {
+  try {
+    const r = await fetch("/api/status");
+    const d = await r.json();
+    isRunning = d.running;
+    updateStatusUI(d.lastDraw);
+    updateStartBtn();
+  } catch(_) {}
+}
+
+function updateStartBtn() {
+  startBtn.className = `start-btn ${isRunning?"on":"off"}`;
+  startBtn.textContent = isRunning ? "⏹ Stop" : "▶ Start";
+}
+
+function updateStatusUI(draw) {
+  const dot  = document.getElementById("status-dot");
+  const txt  = document.getElementById("status-text");
+  dot.className = `status-dot ${isRunning?"running":"stopped"}`;
+  txt.textContent = isRunning ? "Εκτελείται" : "Ανενεργό";
+  if (draw) {
+    document.getElementById("draw-no").textContent = "#" + draw.drawNo;
+    const dt = document.getElementById("draw-time");
+    dt.textContent = draw.drawTime ? draw.drawTime.substring(11,16) : "";
+    dt.style.display = draw.drawTime ? "" : "none";
+    const wrap = document.getElementById("balls-wrap");
+    if (draw.numbers && draw.numbers.length) renderBalls(draw.numbers, wrap, 32);
+  }
+}
+
+/* ════════ Signals ════════ */
+async function fetchSignals() {
+  try {
+    const r = await fetch("/api/signals");
+    signals = await r.json();
+    const badge = document.getElementById("sig-badge");
+    if (signals.length > 0) {
+      badge.style.display = "";
+      badge.textContent = signals.length > 99 ? "99+" : signals.length;
+    } else {
+      badge.style.display = "none";
     }
-    statsCard.style.display = "";
-    const groups = [
-      { key: "hot",     label: "Hot",     cls: "hot-title",  ballCls: "ball-1-20"  },
-      { key: "cold",    label: "Cold",    cls: "cold-title", ballCls: "ball-41-60" },
-      { key: "overdue", label: "Overdue", cls: "over-title", ballCls: "ball-21-40" },
-    ];
-    statsGrid.innerHTML = "";
-    groups.forEach(g => {
-      const nums = stats[g.key] || [];
-      if (!nums.length) return;
-      const div = document.createElement("div");
-      div.className = "stat-group";
-      div.innerHTML = `<h3 class="${g.cls}">${g.label}</h3><div class="mini-balls"></div>`;
-      const mb = div.querySelector(".mini-balls");
-      nums.forEach(n => {
-        const b = document.createElement("div");
-        b.className = `mini-ball ${ballClass(n)}`;
-        b.textContent = n;
-        mb.appendChild(b);
-      });
-      statsGrid.appendChild(div);
+    document.getElementById("sig-count").textContent = signals.length;
+    if (activeTab === "signals") renderSignals();
+    renderRecentSignals();
+  } catch(_) {}
+}
+
+function renderSignals() {
+  const list = document.getElementById("signals-list");
+  if (!signals.length) { list.innerHTML = '<div class="empty">Δεν υπάρχουν σήματα ακόμα</div>'; return; }
+  list.innerHTML = "";
+  signals.forEach(s => {
+    const d = document.createElement("div");
+    d.className = "signal-card";
+    const sentHtml = s.sentTo?.length ? `<div class="sent-to">✈️ ${s.sentTo.join(", ")}</div>` : "";
+    d.innerHTML = `
+      <div class="signal-info">
+        <div class="rule-nm">${s.ruleName}</div>
+        <div class="meta">Root ${s.root} · #${s.drawNo} · ${s.timestamp} · ${s.duration} κλ.</div>
+        ${sentHtml}
+      </div>
+      <div class="signal-balls">${s.suggestion.slice(0,6).map(n=>`<div class="sball ${ballCls(n)}">${n}</div>`).join("")}${s.suggestion.length>6?`<span style="font-size:.65rem;color:#6b7280;align-self:center">+${s.suggestion.length-6}</span>`:""}</div>`;
+    list.appendChild(d);
+  });
+}
+
+function renderRecentSignals() {
+  const recent = signals.slice(0, 3);
+  const wrap = document.getElementById("recent-signals");
+  const list = document.getElementById("recent-signals-list");
+  if (!recent.length) { wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  list.innerHTML = "";
+  recent.forEach(s => {
+    const d = document.createElement("div");
+    d.className = "signal-card";
+    d.innerHTML = `
+      <div class="signal-info">
+        <div class="rule-nm">${s.ruleName}</div>
+        <div class="meta">Root ${s.root} · ${s.timestamp}</div>
+      </div>
+      <div class="signal-balls">${s.suggestion.slice(0,4).map(n=>`<div class="sball ${ballCls(n)}">${n}</div>`).join("")}</div>`;
+    list.appendChild(d);
+  });
+}
+
+document.getElementById("clear-sigs-btn").addEventListener("click", async () => {
+  await fetch("/api/clear-signals", {method:"POST"});
+  signals = [];
+  renderSignals();
+  renderRecentSignals();
+  document.getElementById("sig-badge").style.display = "none";
+  document.getElementById("sig-count").textContent = "0";
+});
+
+/* ════════ Logs ════════ */
+async function fetchLogs() {
+  try {
+    const r = await fetch("/api/logs");
+    const logs = await r.json();
+    const list = document.getElementById("log-list");
+    if (!logs.length) { list.innerHTML = '<div class="empty">Κανένα log ακόμα</div>'; return; }
+    list.innerHTML = "";
+    logs.forEach(e => {
+      const d = document.createElement("div");
+      d.className = "log-entry";
+      d.innerHTML = `<span class="log-ts">${e.timestamp}</span><span class="log-dot ${e.type}"></span><span class="log-msg">${e.message}</span>`;
+      list.appendChild(d);
     });
-  }
+  } catch(_) {}
+}
 
-  async function predict() {
-    predictBtn.disabled = true;
-    predictBtn.textContent = "Υπολογισμός…";
-    numbersGrid.innerHTML = '<div class="spinner"></div>';
-    numbersRow.innerHTML = "";
-    methodBadge.style.display = "none";
-    statsCard.style.display = "none";
+document.getElementById("clear-logs-btn").addEventListener("click", async () => {
+  await fetch("/api/clear-logs", {method:"POST"});
+  document.getElementById("log-list").innerHTML = "";
+});
 
-    try {
-      const res = await fetch(`/api/predict?count=${count}`);
-      const data = await res.json();
+/* ════════ Rules ════════ */
+function renderRules() {
+  if (!cfg) return;
+  const list = document.getElementById("rules-list");
+  list.innerHTML = "";
+  cfg.rules.forEach((rule, i) => {
+    const card = document.createElement("div");
+    card.className = "rule-card";
+    card.innerHTML = `
+      <div class="rule-header">
+        <span class="rule-name">${rule.name}</span>
+        <label class="toggle">
+          <input type="checkbox" ${rule.enabled?"checked":""} data-idx="${i}" class="rule-toggle"/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="rule-fields">
+        <div class="rule-field">
+          <label>Trigger Offsets</label>
+          <input type="text" value="${rule.trigger.join(",")}" placeholder="0,1,2,3" data-idx="${i}" class="rule-trigger"/>
+        </div>
+        <div class="rule-field">
+          <label>Πρόταση Offsets</label>
+          <input type="text" value="${rule.offsets.join(",")}" placeholder="0,1,2,10" data-idx="${i}" class="rule-offsets"/>
+        </div>
+        <div class="rule-field">
+          <label>Διάρκεια (κληρώσεις)</label>
+          <input type="number" value="${rule.duration}" min="0" max="20" data-idx="${i}" class="rule-duration"/>
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
 
-      renderNumbers(data.numbers);
-      renderStats(data.stats);
+document.getElementById("save-rules-btn").addEventListener("click", async () => {
+  if (!cfg) return;
+  document.querySelectorAll(".rule-toggle").forEach(el => {
+    cfg.rules[+el.dataset.idx].enabled = el.checked;
+  });
+  document.querySelectorAll(".rule-trigger").forEach(el => {
+    cfg.rules[+el.dataset.idx].trigger = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n));
+  });
+  document.querySelectorAll(".rule-offsets").forEach(el => {
+    cfg.rules[+el.dataset.idx].offsets = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n));
+  });
+  document.querySelectorAll(".rule-duration").forEach(el => {
+    cfg.rules[+el.dataset.idx].duration = +el.value || 0;
+  });
+  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({rules:cfg.rules})});
+  updateCounters();
+  alert("Κανόνες αποθηκεύτηκαν!");
+});
 
-      methodText.textContent = `${data.method} · ${data.timestamp}`;
-      methodBadge.style.display = "inline-flex";
-    } catch (err) {
-      numbersGrid.innerHTML = `<span style="color:var(--red)">Σφάλμα σύνδεσης. Δοκίμασε ξανά.</span>`;
-    } finally {
-      predictBtn.disabled = false;
-      predictBtn.textContent = "Κάνε Πρόβλεψη";
-    }
-  }
+/* ════════ Telegram ════════ */
+function renderTelegram() {
+  if (!cfg) return;
+  document.getElementById("tg-token").value = cfg.token || "";
+  const list = document.getElementById("targets-list");
+  list.innerHTML = "";
+  cfg.targets.forEach((t, i) => {
+    const d = document.createElement("div");
+    d.className = "tg-target";
+    d.innerHTML = `
+      <div class="tg-target-row">
+        <input type="text" placeholder="Label (π.χ. Κύρια Ομάδα)" value="${t.label||""}" data-idx="${i}" class="tg-label"/>
+        <label class="toggle" style="margin-left:4px">
+          <input type="checkbox" ${t.enabled?"checked":""} data-idx="${i}" class="tg-enabled"/>
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="del-btn" data-idx="${i}">✕</button>
+      </div>
+      <div class="tg-field">
+        <label>Chat ID / Username</label>
+        <input type="text" placeholder="-1001234567890 ή @channel" value="${t.chatId||""}" data-idx="${i}" class="tg-chatid"/>
+      </div>`;
+    d.querySelector(".del-btn").addEventListener("click", () => {
+      cfg.targets.splice(i, 1);
+      renderTelegram();
+    });
+    list.appendChild(d);
+  });
+}
 
-  predictBtn.addEventListener("click", predict);
+document.getElementById("add-target-btn").addEventListener("click", () => {
+  if (!cfg) return;
+  cfg.targets.push({id: Date.now().toString(), chatId:"", label:"Νέο Target", enabled:true});
+  renderTelegram();
+});
+
+document.getElementById("save-tg-btn").addEventListener("click", async () => {
+  if (!cfg) return;
+  cfg.token = document.getElementById("tg-token").value.trim();
+  document.querySelectorAll(".tg-label").forEach(el => {
+    cfg.targets[+el.dataset.idx].label = el.value;
+  });
+  document.querySelectorAll(".tg-chatid").forEach(el => {
+    cfg.targets[+el.dataset.idx].chatId = el.value.trim();
+  });
+  document.querySelectorAll(".tg-enabled").forEach(el => {
+    cfg.targets[+el.dataset.idx].enabled = el.checked;
+  });
+  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:cfg.token, targets:cfg.targets})});
+  updateCounters();
+  alert("Telegram ρυθμίσεις αποθηκεύτηκαν!");
+});
+
+/* ════════ Counters ════════ */
+function updateCounters() {
+  if (!cfg) return;
+  document.getElementById("rules-count").textContent = cfg.rules.filter(r=>r.enabled&&r.trigger.length>0).length;
+  document.getElementById("targets-count").textContent = cfg.targets.filter(t=>t.enabled&&t.chatId).length;
+}
+
+/* ════════ Init & polling ════════ */
+async function init() {
+  const r = await fetch("/api/config");
+  cfg = await r.json();
+  document.getElementById("game-sel").value = cfg.gameId || "1100";
+  updateCounters();
+  await fetchStatus();
+  await fetchSignals();
+}
+
+init();
+setInterval(fetchStatus,  10000);
+setInterval(fetchSignals, 15000);
+setInterval(() => { if (activeTab === "log") fetchLogs(); }, 10000);
 </script>
-
 </body>
 </html>
