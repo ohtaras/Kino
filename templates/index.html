@@ -337,8 +337,8 @@
             style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
         </div>
         <div class="rule-field">
-          <label>Ελάχ. μέγεθος trigger</label>
-          <input type="number" id="rv-mintrig" value="2" min="1" max="6"
+          <label>Ακριβές μέγεθος trigger</label>
+          <input type="number" id="rv-mintrig" value="2" min="1" max="12"
             style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
         </div>
         <div class="rule-field">
@@ -837,7 +837,7 @@ document.getElementById("rv-run-btn").addEventListener("click", async () => {
           if (prevSet.has(n)){tOffs.push(o);tNums.push(n);}
           if (currSet.has(n)){sOffs.push(o);sNums.push(n);}
         }
-        if (tOffs.length<minTrig || sOffs.length<minSugg) continue;
+        if (tOffs.length!==minTrig || sOffs.length<minSugg) continue;
         const key = tOffs.join(",")+"|"+sOffs.join(",");
         if (!counts[key]) counts[key]={trigger:[...tOffs],suggestion:[...sOffs],count:0,examples:[]};
         counts[key].count++;
@@ -862,7 +862,10 @@ document.getElementById("rv-run-btn").addEventListener("click", async () => {
         const prevSet = new Set(draws[i-1].numbers);
         const currSet = new Set(draws[i].numbers);
         for (let root = 1; root <= 80; root++) {
-          const trigOk = p.trigger.every(o=>{const n=root+o;return n>=1&&n<=80&&prevSet.has(n);});
+          // Exact trigger: count offsets found in window must equal p.trigger.length AND all match
+          const foundT=[];
+          for(let o=0;o<=offRange;o++){const n=root+o;if(n>80)break;if(prevSet.has(n))foundT.push(o);}
+          const trigOk = foundT.length===p.trigger.length && p.trigger.every((o,i)=>foundT[i]===o);
           if (!trigOk) continue;
           const hits = p.suggestion.filter(o=>{const n=root+o;return n>=1&&n<=80&&currSet.has(n);}).length;
           hitDist[hits]=(hitDist[hits]||0)+1;
