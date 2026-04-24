@@ -121,8 +121,14 @@
     .hg-cand{display:flex;flex-direction:column;align-items:center;gap:4px;}
     .hg-cand .mini-ball{width:36px;height:36px;font-size:.82rem;}
     .hg-cand .cand-votes{font-size:.65rem;color:var(--muted);}
-    .hg-disclaimer{font-size:.72rem;color:var(--muted);text-align:center;
-      font-style:italic;margin-top:4px;}</style>
+    /* ── Transitions button ── */
+    .tr-btn{background:linear-gradient(135deg,#0e7490,#06b6d4);color:#fff;
+      font-weight:800;font-size:.92rem;letter-spacing:1px;border:none;
+      border-radius:8px;padding:10px 20px;cursor:pointer;flex:1;min-width:140px;
+      transition:opacity .2s,transform .1s;text-transform:uppercase;}
+    .tr-btn:hover{opacity:.9;} .tr-btn:active{transform:scale(.97);}
+    .tr-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .tr-runner{font-size:.72rem;color:var(--muted);text-align:center;margin-top:6px;}</style>
 </head>
 <body>
 
