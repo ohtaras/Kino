@@ -10,15 +10,21 @@ import threading
 import time
 import uuid
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import requests
 from flask import Flask, jsonify, render_template, request
 
+try:
+    from zoneinfo import ZoneInfo
+    _TZ = ZoneInfo("Europe/Athens")
+except Exception:
+    _TZ = timezone(timedelta(hours=3))
+
 app = Flask(__name__)
 
-# ── Config file ──
 CONFIG_FILE = "config.json"
+POLL_INTERVAL = 315
 
 DEFAULT_RULES = [
     {"id": "rule1",  "name": "ΚΑΝΟΝΑΣ 1 (Οριζόντιο)",  "trigger": [0,1,2,3],        "offsets": [0,1,2,3,10,11],   "duration": 4, "enabled": True},
@@ -40,19 +46,15 @@ DEFAULT_CONFIG = {
     "gameId":  "1100",
 }
 
-GAME_OPTIONS = [
-    {"id": "1100", "name": "Kino"},
-    {"id": "5103", "name": "Lotto"},
-    {"id": "5104", "name": "Joker"},
-    {"id": "2100", "name": "Super 3"},
-    {"id": "5106", "name": "Extra 5"},
-]
-
 # ── In-memory state ──
-signals = deque(maxlen=100)
+signals = deque(maxlen=200)
 logs    = deque(maxlen=200)
-state   = {"running": False, "lastDrawNo": None, "lastDraw": None}
+state   = {"running": False, "lastDrawNo": None, "lastDraw": None, "nextTickAt": None}
 _lock   = threading.Lock()
+
+
+def now_gr():
+    return datetime.now(_TZ)
 
 
 def load_config():
@@ -78,7 +80,7 @@ config = load_config()
 
 # ── Logging ──
 def add_log(typ, message):
-    entry = {"id": str(uuid.uuid4()), "timestamp": datetime.now().strftime("%H:%M:%S"), "type": typ, "message": message}
+    entry = {"id": str(uuid.uuid4()), "timestamp": now_gr().strftime("%H:%M:%S"), "type": typ, "message": message}
     with _lock:
         logs.append(entry)
     print(f"[{typ.upper()}] {message}")
@@ -110,6 +112,33 @@ def fetch_last_result(game_id):
         return None
 
 
+def fetch_draws(game_id, limit=100):
+    url = f"https://api.opap.gr/draws/v3.0/{game_id}/last/{limit}"
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        raw = r.json()
+        items = raw if isinstance(raw, list) else raw.get("content", [])
+        results = []
+        for draw in items:
+            numbers = (
+                (draw.get("winningNumbers") or {}).get("list")
+                or draw.get("winningNumbers")
+                or draw.get("results")
+                or []
+            )
+            if numbers:
+                results.append({
+                    "drawNo":   draw.get("drawId") or draw.get("drawNo") or 0,
+                    "drawTime": draw.get("drawTime") or "",
+                    "numbers":  [int(n) for n in numbers],
+                })
+        return results
+    except Exception as e:
+        add_log("error", f"OPAP draws: {e}")
+        return []
+
+
 # ── Rule engine ──
 def check_rules(rules, winning_numbers):
     win_set = set(winning_numbers)
@@ -123,7 +152,13 @@ def check_rules(rules, winning_numbers):
                 continue
             if all(n in win_set for n in trigger_nums):
                 suggestion = sorted([root + o for o in rule["offsets"] if 1 <= root + o <= 80])
-                matches.append({"ruleName": rule["name"], "root": root, "suggestion": suggestion, "duration": rule.get("duration", 1)})
+                matches.append({
+                    "ruleName":    rule["name"],
+                    "root":        root,
+                    "triggerNums": trigger_nums,
+                    "suggestion":  suggestion,
+                    "duration":    rule.get("duration", 1),
+                })
     return matches
 
 
@@ -162,18 +197,38 @@ def tick():
     if not result or not result["numbers"]:
         add_log("warning", "Δεν ελήφθησαν αποτελέσματα ή εκτός ωραρίου.")
         return
+
     with _lock:
         state["lastDraw"] = result
+
     draw_no = result["drawNo"]
+    win_set = set(result["numbers"])
+
+    # Evaluate active (pending) signals
+    with _lock:
+        for sig in list(signals):
+            remaining = sig.get("drawsRemaining", 0)
+            if remaining > 0 and sig["drawNo"] != draw_no:
+                hits = len(set(sig["suggestion"]) & win_set)
+                sig.setdefault("evaluations", []).append({
+                    "drawNo": draw_no,
+                    "hits":   hits,
+                    "total":  len(sig["suggestion"]),
+                })
+                sig["drawsRemaining"] = remaining - 1
+
     if state["lastDrawNo"] == draw_no:
         add_log("info", f"Κλήρωση #{draw_no} ήδη ελέγχθηκε.")
         return
+
     state["lastDrawNo"] = draw_no
     add_log("success", f"Κλήρωση #{draw_no} · [{', '.join(str(n) for n in result['numbers'])}]")
+
     matches = check_rules(config["rules"], result["numbers"])
     if not matches:
         add_log("info", "Κανένας κανόνας δεν ενεργοποιήθηκε.")
         return
+
     add_log("success", f"🎯 {len(matches)} κανόνας/ες ενεργοποιήθηκε!")
     for m in matches:
         sugg = ", ".join(str(n) for n in m["suggestion"])
@@ -189,20 +244,33 @@ def tick():
                     add_log("error", f"Telegram αποτυχία → {tr['label']}: {tr['error']}")
         else:
             add_log("warning", "Δεν υπάρχει Telegram token.")
+
         with _lock:
-            signals.append({"id": str(uuid.uuid4()), "timestamp": datetime.now().strftime("%H:%M:%S"),
-                            "ruleName": m["ruleName"], "root": m["root"], "suggestion": m["suggestion"],
-                            "duration": m["duration"], "drawNo": draw_no, "sentTo": sent_to})
+            signals.append({
+                "id":            str(uuid.uuid4()),
+                "timestamp":     now_gr().strftime("%H:%M:%S"),
+                "ruleName":      m["ruleName"],
+                "root":          m["root"],
+                "triggerNums":   m["triggerNums"],
+                "suggestion":    m["suggestion"],
+                "duration":      m["duration"],
+                "drawNo":        draw_no,
+                "sentTo":        sent_to,
+                "drawsRemaining": m["duration"],
+                "evaluations":   [],
+            })
 
 
-# ── Background scheduler (every 5m15s) ──
+# ── Background scheduler ──
 def scheduler_loop():
     while True:
         try:
             tick()
         except Exception as e:
             add_log("error", f"Scheduler: {e}")
-        time.sleep(315)
+        with _lock:
+            state["nextTickAt"] = time.time() + POLL_INTERVAL
+        time.sleep(POLL_INTERVAL)
 
 
 threading.Thread(target=scheduler_loop, daemon=True).start()
@@ -211,13 +279,17 @@ threading.Thread(target=scheduler_loop, daemon=True).start()
 # ── Routes ──
 @app.route("/")
 def index():
-    return render_template("index.html", game_options=GAME_OPTIONS)
+    return render_template("index.html")
 
 
 @app.route("/api/status")
 def api_status():
     with _lock:
-        return jsonify({"running": state["running"], "lastDraw": state["lastDraw"]})
+        return jsonify({
+            "running":    state["running"],
+            "lastDraw":   state["lastDraw"],
+            "nextTickAt": state["nextTickAt"],
+        })
 
 
 @app.route("/api/config", methods=["GET"])
@@ -236,7 +308,7 @@ def api_config_post():
     return jsonify({"ok": True})
 
 
-@app.route("/api/start",  methods=["POST"])
+@app.route("/api/start", methods=["POST"])
 def api_start():
     state["running"] = True
     add_log("info", "▶️ Monitor ξεκίνησε.")
@@ -291,6 +363,13 @@ def api_clear_logs():
     with _lock:
         logs.clear()
     return jsonify({"ok": True})
+
+
+@app.route("/api/draws")
+def api_draws():
+    limit = min(int(request.args.get("limit", 100)), 300)
+    draws = fetch_draws(config["gameId"], limit)
+    return jsonify(draws)
 
 
 if __name__ == "__main__":

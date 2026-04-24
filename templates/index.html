@@ -7,130 +7,160 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#030712;color:#f9fafb;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
-    .app{width:100%;max-width:640px;display:flex;flex-direction:column;min-height:100vh;}
+    .app{width:100%;max-width:680px;display:flex;flex-direction:column;min-height:100vh;}
 
     /* Header */
-    .header{position:sticky;top:0;z-index:20;background:#030712;border-bottom:1px solid #1f2937;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+    .header{position:sticky;top:0;z-index:20;background:#030712;border-bottom:1px solid #1f2937;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;}
     .logo{display:flex;align-items:center;gap:10px;}
-    .logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
-    .logo-text h1{font-size:.95rem;font-weight:700;color:#f9fafb;}
-    .logo-text p{font-size:.72rem;color:#6b7280;}
+    .logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+    .logo-text h1{font-size:.92rem;font-weight:700;}
+    .logo-text p{font-size:.68rem;color:#6b7280;}
     .header-right{display:flex;align-items:center;gap:8px;}
-    select.game-sel{background:#1f2937;border:1px solid #374151;color:#f9fafb;font-size:.75rem;border-radius:8px;padding:6px 8px;outline:none;}
-    .start-btn{padding:6px 14px;border-radius:8px;font-size:.75rem;font-weight:700;border:none;cursor:pointer;transition:background .15s;}
-    .start-btn.on{background:#dc2626;color:#fff;}
-    .start-btn.off{background:#16a34a;color:#fff;}
+    .toggle-run{padding:7px 18px;border-radius:8px;font-size:.78rem;font-weight:700;border:none;cursor:pointer;transition:background .15s,transform .1s;}
+    .toggle-run:active{transform:scale(.96);}
+    .toggle-run.off{background:#16a34a;color:#fff;}
+    .toggle-run.on{background:#dc2626;color:#fff;}
+    .countdown-pill{background:#1f2937;border:1px solid #374151;border-radius:20px;padding:4px 10px;font-size:.72rem;color:#facc15;font-family:monospace;min-width:60px;text-align:center;}
 
     /* Tabs */
-    .tabs{display:flex;border-bottom:1px solid #1f2937;background:#030712;position:sticky;top:61px;z-index:10;}
-    .tab-btn{flex:1;padding:10px 4px;background:none;border:none;color:#6b7280;font-size:.7rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;}
-    .tab-btn .t-icon{font-size:1.1rem;}
+    .tabs{display:flex;border-bottom:1px solid #1f2937;background:#030712;position:sticky;top:55px;z-index:10;overflow-x:auto;}
+    .tab-btn{flex:1;min-width:52px;padding:9px 2px;background:none;border:none;color:#6b7280;font-size:.65rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;white-space:nowrap;}
+    .tab-btn .t-icon{font-size:1rem;}
     .tab-btn:hover{color:#d1d5db;}
     .tab-btn.active{color:#60a5fa;border-bottom-color:#60a5fa;}
-    .tab-badge{position:absolute;top:6px;right:calc(50% - 16px);background:#ef4444;color:#fff;font-size:.55rem;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-weight:800;}
+    .tab-badge{position:absolute;top:5px;right:calc(50% - 18px);background:#ef4444;color:#fff;font-size:.52rem;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;font-weight:800;}
 
     /* Main */
-    main{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;padding-bottom:32px;}
+    main{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:32px;}
 
     /* Cards */
-    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:16px;}
-    .card-title{font-size:.7rem;font-weight:700;letter-spacing:1.5px;color:#6b7280;text-transform:uppercase;margin-bottom:12px;}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;}
+    .card-title{font-size:.68rem;font-weight:700;letter-spacing:1.5px;color:#6b7280;text-transform:uppercase;margin-bottom:10px;}
 
-    /* Status bar */
-    .status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    /* Status row */
+    .status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
     .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
     .status-dot.running{background:#22c55e;box-shadow:0 0 8px #22c55e;}
     .status-dot.stopped{background:#6b7280;}
-    .status-text{font-size:.85rem;font-weight:600;}
-    .draw-pill{background:#1f2937;border-radius:20px;padding:4px 10px;font-size:.72rem;color:#9ca3af;}
+    .status-text{font-size:.82rem;font-weight:600;}
+    .draw-pill{background:#1f2937;border-radius:20px;padding:4px 10px;font-size:.7rem;color:#9ca3af;}
     .draw-pill span{color:#60a5fa;font-weight:700;}
 
-    /* Number balls */
-    .balls-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-    .ball{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;}
-    .ball.r1{background:radial-gradient(circle at 35% 35%,#f97316,#c2410c);color:#fff;}
-    .ball.r2{background:radial-gradient(circle at 35% 35%,#facc15,#d97706);color:#000;}
-    .ball.r3{background:radial-gradient(circle at 35% 35%,#67e8f9,#0891b2);color:#000;}
-    .ball.r4{background:radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed);color:#fff;}
+    /* 80-ball grid */
+    .kino-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:4px;}
+    .gc{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;background:#1a2332;color:#374151;cursor:default;transition:transform .1s;}
+    .gc.drawn{color:#fff;}
+    .gc.d1{background:radial-gradient(circle at 35% 35%,#f97316,#c2410c);color:#fff;}
+    .gc.d2{background:radial-gradient(circle at 35% 35%,#facc15,#d97706);color:#000;}
+    .gc.d3{background:radial-gradient(circle at 35% 35%,#67e8f9,#0891b2);color:#000;}
+    .gc.d4{background:radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed);color:#fff;}
+    .gc.suggest{outline:2px solid #22c55e;outline-offset:1px;box-shadow:0 0 7px #22c55e88;}
+    .gc.trigger{outline:2px solid #f59e0b;outline-offset:1px;box-shadow:0 0 7px #f59e0b88;}
+    .gc.drawn.suggest{outline:2px solid #22c55e;outline-offset:1px;}
+    .gc.drawn.trigger{outline:2px solid #f59e0b;outline-offset:1px;}
 
-    /* Grid stats */
-    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-    .stat-box{background:#1f2937;border-radius:12px;padding:12px;text-align:center;}
-    .stat-box .num{font-size:1.6rem;font-weight:800;}
-    .stat-box .lbl{font-size:.68rem;color:#6b7280;margin-top:2px;}
-    .blue{color:#60a5fa;} .green{color:#4ade80;} .purple{color:#c084fc;}
+    /* Active suggestion cards */
+    .active-sig{background:#0d1f12;border:1px solid #166534;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+    .active-sig-hdr{display:flex;align-items:center;justify-content:space-between;}
+    .active-sig-rule{font-size:.75rem;font-weight:700;color:#4ade80;}
+    .active-sig-meta{font-size:.65rem;color:#6b7280;}
+    .active-sig-pills{display:flex;flex-wrap:wrap;gap:4px;}
+    .sp{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;border:2px solid #22c55e;}
+    .sp.d1{background:radial-gradient(circle at 35% 35%,#f97316,#c2410c);color:#fff;}
+    .sp.d2{background:radial-gradient(circle at 35% 35%,#facc15,#d97706);color:#000;}
+    .sp.d3{background:radial-gradient(circle at 35% 35%,#67e8f9,#0891b2);color:#000;}
+    .sp.d4{background:radial-gradient(circle at 35% 35%,#a78bfa,#7c3aed);color:#fff;}
+    .remaining-bar{height:4px;background:#1f2937;border-radius:2px;overflow:hidden;}
+    .remaining-fill{height:100%;background:#22c55e;border-radius:2px;transition:width .3s;}
+
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .stat-box{background:#1f2937;border-radius:10px;padding:10px;text-align:center;}
+    .stat-box .num{font-size:1.4rem;font-weight:800;}
+    .stat-box .lbl{font-size:.62rem;color:#6b7280;margin-top:2px;}
+    .blue{color:#60a5fa;} .green{color:#4ade80;} .amber{color:#fbbf24;}
 
     /* Buttons */
-    .btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;font-size:.82rem;font-weight:700;border:none;cursor:pointer;transition:opacity .15s,transform .1s;width:100%;}
+    .btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:10px;font-size:.8rem;font-weight:700;border:none;cursor:pointer;transition:opacity .15s,transform .1s;width:100%;}
     .btn:hover{opacity:.88;} .btn:active{transform:scale(.97);}
     .btn-ghost{background:#1f2937;color:#d1d5db;border:1px solid #374151;}
     .btn-blue{background:#2563eb;color:#fff;}
     .btn-red{background:#dc2626;color:#fff;}
-
-    /* Schedule info */
-    .schedule-box{background:#111827;border:1px solid #374151;border-radius:12px;padding:14px;}
-    .schedule-box p{font-size:.78rem;color:#9ca3af;line-height:1.5;}
-    .schedule-box .highlight{color:#facc15;font-family:monospace;}
-    .times-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
-    .time-pill{background:#1f2937;border-radius:6px;padding:5px;text-align:center;font-family:monospace;font-size:.7rem;color:#9ca3af;}
+    .btn-green{background:#16a34a;color:#fff;}
 
     /* Rules */
-    .rule-card{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+    .rule-card{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;}
     .rule-header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-    .rule-name{font-size:.82rem;font-weight:700;color:#f9fafb;}
-    .toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+    .rule-name{font-size:.8rem;font-weight:700;color:#f9fafb;}
+    .toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
     .toggle input{opacity:0;width:0;height:0;}
-    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#374151;border-radius:24px;transition:.2s;}
-    .toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#374151;border-radius:22px;transition:.2s;}
+    .toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
     .toggle input:checked+.toggle-slider{background:#2563eb;}
     .toggle input:checked+.toggle-slider:before{transform:translateX(18px);}
-    .rule-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-    .rule-field label{font-size:.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;}
-    .rule-field input{width:100%;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;outline:none;}
+    .rule-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+    .rule-field label{font-size:.62rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px;}
+    .rule-field input{width:100%;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:6px 8px;font-size:.75rem;outline:none;}
     .rule-field input:focus{border-color:#3b82f6;}
     .rule-field.full{grid-column:1/-1;}
 
     /* Telegram */
-    .tg-section{display:flex;flex-direction:column;gap:12px;}
-    .tg-field label{font-size:.7rem;color:#6b7280;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
-    .tg-field input{width:100%;background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:8px;padding:10px 12px;font-size:.82rem;outline:none;}
+    .tg-field label{font-size:.68rem;color:#6b7280;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;}
+    .tg-field input{width:100%;background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:8px;padding:9px 11px;font-size:.8rem;outline:none;}
     .tg-field input:focus{border-color:#3b82f6;}
-    .tg-target{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;}
-    .tg-target-row{display:flex;align-items:center;gap:8px;}
-    .tg-target-row input{flex:1;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;outline:none;}
-    .tg-target-row input:focus{border-color:#3b82f6;}
-    .del-btn{background:#374151;border:none;color:#ef4444;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;}
-    .add-btn{background:none;border:1px dashed #374151;color:#6b7280;border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;width:100%;transition:border-color .15s,color .15s;}
+    .tg-target{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:7px;}
+    .tg-target-row{display:flex;align-items:center;gap:7px;}
+    .tg-target-row input{flex:1;background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:6px 9px;font-size:.75rem;outline:none;}
+    .del-btn{background:#374151;border:none;color:#ef4444;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .add-btn{background:none;border:1px dashed #374151;color:#6b7280;border-radius:8px;padding:8px;font-size:.75rem;cursor:pointer;width:100%;transition:border-color .15s,color .15s;}
     .add-btn:hover{border-color:#3b82f6;color:#60a5fa;}
-    .info-box{background:#1e3a5f;border:1px solid #1d4ed8;border-radius:10px;padding:12px;font-size:.75rem;color:#93c5fd;line-height:1.5;}
+    .info-box{background:#1e3a5f;border:1px solid #1d4ed8;border-radius:10px;padding:11px;font-size:.72rem;color:#93c5fd;line-height:1.5;}
     .info-box a{color:#60a5fa;}
 
     /* Signals */
-    .signal-card{background:#1f2937;border-left:3px solid #22c55e;border-radius:0 10px 10px 0;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-    .signal-info .rule-nm{font-size:.8rem;font-weight:700;color:#facc15;}
-    .signal-info .meta{font-size:.68rem;color:#6b7280;margin-top:2px;}
-    .signal-balls{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
-    .sball{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;}
-    .sent-to{font-size:.65rem;color:#4ade80;margin-top:4px;}
+    .signal-card{background:#1f2937;border-left:3px solid #22c55e;border-radius:0 10px 10px 0;padding:11px;display:flex;flex-direction:column;gap:6px;}
+    .signal-card.expired{border-left-color:#374151;}
+    .signal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .signal-rule{font-size:.78rem;font-weight:700;color:#facc15;}
+    .signal-meta{font-size:.65rem;color:#6b7280;}
+    .signal-balls{display:flex;gap:3px;flex-wrap:wrap;}
+    .sball{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;}
+    .eval-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;}
+    .eval-chip{font-size:.6rem;background:#111827;border-radius:5px;padding:2px 7px;color:#9ca3af;}
+    .eval-chip.hit{color:#4ade80;border:1px solid #166534;}
+    .eval-chip.miss{color:#6b7280;}
+    .sent-lbl{font-size:.62rem;color:#4ade80;}
 
     /* Log */
-    .log-entry{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #1f2937;font-size:.75rem;}
+    .log-entry{display:flex;gap:7px;padding:6px 0;border-bottom:1px solid #1f2937;font-size:.72rem;}
     .log-entry:last-child{border-bottom:none;}
     .log-ts{color:#4b5563;white-space:nowrap;font-family:monospace;}
-    .log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
-    .log-dot.info{background:#3b82f6;} .log-dot.success{background:#22c55e;}
-    .log-dot.error{background:#ef4444;} .log-dot.warning{background:#f59e0b;}
+    .log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+    .log-dot.info{background:#3b82f6;}.log-dot.success{background:#22c55e;}
+    .log-dot.error{background:#ef4444;}.log-dot.warning{background:#f59e0b;}
     .log-msg{color:#d1d5db;line-height:1.4;}
 
+    /* Backtest */
+    .bt-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+    .bt-table th{background:#1f2937;color:#9ca3af;font-size:.62rem;text-transform:uppercase;letter-spacing:1px;padding:7px 8px;text-align:left;border-bottom:1px solid #374151;}
+    .bt-table td{padding:7px 8px;border-bottom:1px solid #111827;color:#d1d5db;vertical-align:middle;}
+    .bt-table tr:last-child td{border-bottom:none;}
+    .pct-bar{height:6px;background:#1f2937;border-radius:3px;overflow:hidden;margin-top:3px;}
+    .pct-fill{height:100%;border-radius:3px;}
+    .pct-fill.good{background:#22c55e;}
+    .pct-fill.ok{background:#f59e0b;}
+    .pct-fill.bad{background:#ef4444;}
+    .bt-empty{text-align:center;padding:24px;color:#4b5563;font-size:.8rem;}
+
     /* Empty state */
-    .empty{text-align:center;padding:32px 16px;color:#4b5563;font-size:.85rem;}
+    .empty{text-align:center;padding:28px 16px;color:#4b5563;font-size:.82rem;}
 
-    /* Save bar */
-    .save-bar{position:fixed;bottom:0;left:0;right:0;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:.82rem;z-index:100;transform:translateY(100%);transition:transform .25s;}
-    .save-bar.visible{transform:translateY(0);}
-    .save-bar button{background:#fff;color:#1d4ed8;border:none;border-radius:6px;padding:6px 14px;font-weight:700;cursor:pointer;font-size:.78rem;}
+    /* Legend */
+    .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.65rem;color:#9ca3af;margin-top:8px;}
+    .leg-item{display:flex;align-items:center;gap:4px;}
+    .leg-dot{width:10px;height:10px;border-radius:50%;}
 
-    footer{color:#374151;font-size:.68rem;text-align:center;padding:8px 16px 16px;}
+    footer{color:#374151;font-size:.65rem;text-align:center;padding:6px 16px 14px;}
   </style>
 </head>
 <body>
@@ -142,18 +172,12 @@
       <div class="logo-icon">🎱</div>
       <div class="logo-text">
         <h1>KINO Monitor</h1>
-        <p>OPAP · Telegram Bot</p>
+        <p id="header-sub">OPAP · Kino</p>
       </div>
     </div>
     <div class="header-right">
-      <select class="game-sel" id="game-sel">
-        <option value="1100">Kino</option>
-        <option value="5103">Lotto</option>
-        <option value="5104">Joker</option>
-        <option value="2100">Super 3</option>
-        <option value="5106">Extra 5</option>
-      </select>
-      <button class="start-btn off" id="start-btn">▶ Start</button>
+      <div class="countdown-pill" id="countdown">--:--</div>
+      <button class="toggle-run off" id="run-btn">▶ Start</button>
     </div>
   </header>
 
@@ -164,73 +188,74 @@
     <button class="tab-btn" data-tab="telegram"><span class="t-icon">📨</span><span>Telegram</span></button>
     <button class="tab-btn" data-tab="signals"><span class="t-icon">🚨</span><span>Σήματα</span><span class="tab-badge" id="sig-badge" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="log"><span class="t-icon">📋</span><span>Log</span></button>
+    <button class="tab-btn" data-tab="backtest"><span class="t-icon">🔬</span><span>Ανάλυση</span></button>
   </nav>
 
-  <!-- DASHBOARD -->
+  <!-- ═══ DASHBOARD ═══ -->
   <main id="tab-dashboard">
     <div class="card">
-      <div class="card-title">Κατάσταση</div>
       <div class="status-row">
         <div class="status-dot stopped" id="status-dot"></div>
         <span class="status-text" id="status-text">Ανενεργό</span>
         <div class="draw-pill">Κλήρωση <span id="draw-no">—</span></div>
-        <div class="draw-pill" id="draw-time"></div>
+        <div class="draw-pill" id="draw-time" style="display:none"></div>
       </div>
-      <div class="balls-wrap" id="balls-wrap">
-        <span style="color:#4b5563;font-size:.78rem;">Δεν υπάρχουν δεδομένα ακόμα</span>
+      <!-- 80-cell grid -->
+      <div class="kino-grid" id="kino-grid"></div>
+      <!-- Legend -->
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#f97316"></div>1–20</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#facc15"></div>21–40</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#67e8f9"></div>41–60</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#a78bfa"></div>61–80</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#1a2332;outline:2px solid #f59e0b;outline-offset:1px"></div>Trigger</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#1a2332;outline:2px solid #22c55e;outline-offset:1px"></div>Πρόταση</div>
       </div>
     </div>
 
+    <!-- Active suggestions -->
+    <div id="active-sigs-wrap" style="display:none;">
+      <p style="font-size:.72rem;color:#4ade80;margin-bottom:6px;font-weight:700;">🟢 Ενεργές Προτάσεις — Παίξε τώρα</p>
+      <div id="active-sigs-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <!-- Stats -->
     <div class="stats-grid">
       <div class="stat-box"><div class="num blue" id="sig-count">0</div><div class="lbl">Σήματα</div></div>
       <div class="stat-box"><div class="num green" id="rules-count">0</div><div class="lbl">Κανόνες</div></div>
-      <div class="stat-box"><div class="num purple" id="targets-count">0</div><div class="lbl">Targets</div></div>
+      <div class="stat-box"><div class="num amber" id="targets-count">0</div><div class="lbl">Targets</div></div>
     </div>
 
     <button class="btn btn-ghost" id="manual-check-btn">🔍 Χειροκίνητος Έλεγχος Τώρα</button>
-
-    <div class="schedule-box">
-      <p>⏱ Κύκλος κάθε <span class="highlight">5 λεπτά και 15 δευτερόλεπτα</span></p>
-      <div class="times-grid">
-        <div class="time-pill">00:00:15</div><div class="time-pill">00:05:15</div>
-        <div class="time-pill">00:10:15</div><div class="time-pill">00:15:15</div>
-        <div class="time-pill">00:20:15</div><div class="time-pill">…</div>
-      </div>
-    </div>
-
-    <div id="recent-signals" style="display:none;">
-      <p style="font-size:.78rem;color:#6b7280;margin-bottom:8px;">🚨 Τελευταία Σήματα</p>
-      <div id="recent-signals-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-    </div>
   </main>
 
-  <!-- RULES -->
+  <!-- ═══ RULES ═══ -->
   <main id="tab-rules" style="display:none;">
     <div class="card">
-      <p style="font-size:.75rem;color:#9ca3af;line-height:1.5;">
-        💡 Κάθε κανόνας ορίζει <span style="color:#facc15;">offsets trigger</span> (pattern στα αποτελέσματα)
-        και <span style="color:#4ade80;">offsets πρότασης</span>. Εφαρμόζεται για κάθε root 1–80.
+      <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;">
+        💡 Κάθε κανόνας ορίζει <span style="color:#f59e0b;">Trigger offsets</span> (pattern στα αποτελέσματα)
+        και <span style="color:#22c55e;">offsets πρότασης</span>. Εφαρμόζεται για κάθε root 1–80.
       </p>
     </div>
-    <div id="rules-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="rules-list" style="display:flex;flex-direction:column;gap:8px;"></div>
     <button class="btn btn-blue" id="save-rules-btn">💾 Αποθήκευση Κανόνων</button>
   </main>
 
-  <!-- TELEGRAM -->
+  <!-- ═══ TELEGRAM ═══ -->
   <main id="tab-telegram" style="display:none;">
     <div class="info-box">
-      💡 Χρησιμοποίησε <a href="https://t.me/BotFather" target="_blank">@BotFather</a> για bot token.
-      Για Chat ID χρησιμοποίησε <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.
-      Μπορείς να προσθέσεις πολλαπλά targets (groups, channels, άτομα).
+      💡 <a href="https://t.me/BotFather" target="_blank">@BotFather</a> για bot token.
+      <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> για Chat ID.
+      Μπορείς να προσθέσεις groups, channels, άτομα.
     </div>
-    <div class="card tg-section">
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
       <div class="card-title">Bot Token</div>
       <div class="tg-field">
         <label>Telegram Bot Token</label>
-        <input type="password" id="tg-token" placeholder="123456:ABC-DEF1234…"/>
+        <input type="password" id="tg-token" placeholder="123456:ABC-DEF…"/>
       </div>
     </div>
-    <div class="card tg-section">
+    <div class="card" style="display:flex;flex-direction:column;gap:8px;">
       <div class="card-title">Targets (Groups / Channels / Άτομα)</div>
       <div id="targets-list" style="display:flex;flex-direction:column;gap:8px;"></div>
       <button class="add-btn" id="add-target-btn">+ Προσθήκη Target</button>
@@ -238,43 +263,54 @@
     <button class="btn btn-blue" id="save-tg-btn">💾 Αποθήκευση Telegram</button>
   </main>
 
-  <!-- SIGNALS -->
+  <!-- ═══ SIGNALS ═══ -->
   <main id="tab-signals" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <span style="font-size:.82rem;color:#9ca3af;">🚨 Σήματα</span>
-      <button class="btn btn-ghost" style="width:auto;padding:5px 12px;font-size:.72rem;" id="clear-sigs-btn">Καθαρισμός</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="font-size:.8rem;color:#9ca3af;">🚨 Ιστορικό Σημάτων</span>
+      <button class="btn btn-ghost" style="width:auto;padding:4px 11px;font-size:.7rem;" id="clear-sigs-btn">Καθαρισμός</button>
     </div>
     <div id="signals-list" style="display:flex;flex-direction:column;gap:8px;"></div>
   </main>
 
-  <!-- LOG -->
+  <!-- ═══ LOG ═══ -->
   <main id="tab-log" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <span style="font-size:.82rem;color:#9ca3af;">📋 Activity Log</span>
-      <button class="btn btn-ghost" style="width:auto;padding:5px 12px;font-size:.72rem;" id="clear-logs-btn">Καθαρισμός</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="font-size:.8rem;color:#9ca3af;">📋 Activity Log</span>
+      <button class="btn btn-ghost" style="width:auto;padding:4px 11px;font-size:.7rem;" id="clear-logs-btn">Καθαρισμός</button>
     </div>
-    <div class="card" style="padding:8px 14px;">
-      <div id="log-list" style="display:flex;flex-direction:column;"></div>
+    <div class="card" style="padding:8px 12px;">
+      <div id="log-list"></div>
     </div>
   </main>
 
-  <footer>KINO OPAP Monitor · Κύκλος κάθε 5:15 · api.opap.gr</footer>
+  <!-- ═══ BACKTEST ═══ -->
+  <main id="tab-backtest" style="display:none;">
+    <div class="card">
+      <div class="card-title">Ανάλυση Κανόνων — Τελευταίες 100 Κληρώσεις</div>
+      <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;margin-bottom:10px;">
+        Φορτώνει τις 100 τελευταίες κληρώσεις Kino και ελέγχει πόσες φορές ενεργοποιήθηκε κάθε κανόνας,
+        και αν η πρόταση βγήκε (≥1 αριθμός) στις επόμενες κληρώσεις ανάλογα με τη διάρκεια.
+      </p>
+      <button class="btn btn-blue" id="bt-load-btn">📥 Φόρτωση &amp; Ανάλυση</button>
+    </div>
+    <div id="bt-results" style="display:none;display:flex;flex-direction:column;gap:10px;"></div>
+  </main>
+
+  <footer>KINO Monitor · api.opap.gr · Greece Time</footer>
 </div>
-
 <script>
-/* ════════ State ════════ */
-let cfg = null;
-let isRunning = false;
-let signals   = [];
-let activeTab = "dashboard";
+/* ══ State ══ */
+let cfg = null, isRunning = false, signalsData = [], activeTab = "dashboard";
+let lastDraw = null, nextTickAt = null;
 
-/* ════════ Tabs ════════ */
+/* ══ Tabs ══ */
+const ALL_TABS = ["dashboard","rules","telegram","signals","log","backtest"];
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeTab = btn.dataset.tab;
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    ["dashboard","rules","telegram","signals","log"].forEach(t => {
+    ALL_TABS.forEach(t => {
       document.getElementById("tab-"+t).style.display = t === activeTab ? "" : "none";
     });
     if (activeTab === "rules")    renderRules();
@@ -284,164 +320,206 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
-/* ════════ Helpers ════════ */
-function ballCls(n) { return n<=20?"r1":n<=40?"r2":n<=60?"r3":"r4"; }
+/* ══ Helpers ══ */
+function ballCls(n){ return n<=20?"d1":n<=40?"d2":n<=60?"d3":"d4"; }
 
-function renderBalls(numbers, container, size=32) {
-  container.innerHTML = "";
-  numbers.forEach(n => {
-    const b = document.createElement("div");
-    b.className = `ball ${ballCls(n)}`;
-    b.style.cssText = `width:${size}px;height:${size}px;font-size:${size*.23}rem`;
-    b.textContent = n;
-    container.appendChild(b);
-  });
-}
-
-/* ════════ Start / Stop ════════ */
-const startBtn = document.getElementById("start-btn");
-startBtn.addEventListener("click", async () => {
-  const endpoint = isRunning ? "/api/stop" : "/api/start";
-  await fetch(endpoint, {method:"POST"});
-  await fetchStatus();
-});
-
-/* ════════ Game selector ════════ */
-document.getElementById("game-sel").addEventListener("change", async e => {
-  cfg.gameId = e.target.value;
-  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({gameId:cfg.gameId})});
-});
-
-/* ════════ Manual check ════════ */
-document.getElementById("manual-check-btn").addEventListener("click", async () => {
-  const btn = document.getElementById("manual-check-btn");
-  btn.textContent = "Ελέγχει…"; btn.disabled = true;
-  await fetch("/api/check", {method:"POST"});
-  await fetchStatus();
-  await fetchLogs();
-  btn.textContent = "🔍 Χειροκίνητος Έλεγχος Τώρα"; btn.disabled = false;
-});
-
-/* ════════ Status polling ════════ */
-async function fetchStatus() {
-  try {
-    const r = await fetch("/api/status");
-    const d = await r.json();
-    isRunning = d.running;
-    updateStatusUI(d.lastDraw);
-    updateStartBtn();
-  } catch(_) {}
-}
-
-function updateStartBtn() {
-  startBtn.className = `start-btn ${isRunning?"on":"off"}`;
-  startBtn.textContent = isRunning ? "⏹ Stop" : "▶ Start";
-}
-
-function updateStatusUI(draw) {
-  const dot  = document.getElementById("status-dot");
-  const txt  = document.getElementById("status-text");
-  dot.className = `status-dot ${isRunning?"running":"stopped"}`;
-  txt.textContent = isRunning ? "Εκτελείται" : "Ανενεργό";
-  if (draw) {
-    document.getElementById("draw-no").textContent = "#" + draw.drawNo;
-    const dt = document.getElementById("draw-time");
-    dt.textContent = draw.drawTime ? draw.drawTime.substring(11,16) : "";
-    dt.style.display = draw.drawTime ? "" : "none";
-    const wrap = document.getElementById("balls-wrap");
-    if (draw.numbers && draw.numbers.length) renderBalls(draw.numbers, wrap, 32);
+/* ══ 80-cell grid ══ */
+function buildGrid() {
+  const grid = document.getElementById("kino-grid");
+  grid.innerHTML = "";
+  for (let i = 1; i <= 80; i++) {
+    const c = document.createElement("div");
+    c.className = "gc";
+    c.id = "gc"+i;
+    c.textContent = i;
+    grid.appendChild(c);
   }
 }
 
-/* ════════ Signals ════════ */
-async function fetchSignals() {
-  try {
-    const r = await fetch("/api/signals");
-    signals = await r.json();
-    const badge = document.getElementById("sig-badge");
-    if (signals.length > 0) {
-      badge.style.display = "";
-      badge.textContent = signals.length > 99 ? "99+" : signals.length;
-    } else {
-      badge.style.display = "none";
-    }
-    document.getElementById("sig-count").textContent = signals.length;
-    if (activeTab === "signals") renderSignals();
-    renderRecentSignals();
-  } catch(_) {}
+function updateGrid(drawnNums, triggerNums, suggestNums) {
+  const drawnSet   = new Set(drawnNums || []);
+  const triggerSet = new Set(triggerNums || []);
+  const suggestSet = new Set(suggestNums || []);
+  for (let i = 1; i <= 80; i++) {
+    const c = document.getElementById("gc"+i);
+    if (!c) continue;
+    c.className = "gc";
+    if (drawnSet.has(i)) c.classList.add("drawn", ballCls(i));
+    if (triggerSet.has(i)) c.classList.add("trigger");
+    if (suggestSet.has(i)) c.classList.add("suggest");
+  }
 }
 
-function renderSignals() {
-  const list = document.getElementById("signals-list");
-  if (!signals.length) { list.innerHTML = '<div class="empty">Δεν υπάρχουν σήματα ακόμα</div>'; return; }
+/* ══ Countdown ══ */
+function updateCountdown() {
+  const el = document.getElementById("countdown");
+  if (!nextTickAt || !isRunning) { el.textContent = "--:--"; return; }
+  const diff = Math.max(0, Math.round(nextTickAt - Date.now()/1000));
+  const m = String(Math.floor(diff/60)).padStart(2,"0");
+  const s = String(diff%60).padStart(2,"0");
+  el.textContent = m+":"+s;
+}
+
+/* ══ Run button ══ */
+const runBtn = document.getElementById("run-btn");
+runBtn.addEventListener("click", async () => {
+  const ep = isRunning ? "/api/stop" : "/api/start";
+  await fetch(ep, {method:"POST"});
+  await fetchStatus();
+});
+
+function updateRunBtn() {
+  runBtn.className = "toggle-run " + (isRunning ? "on" : "off");
+  runBtn.textContent = isRunning ? "⏹ Stop" : "▶ Start";
+}
+
+/* ══ Active suggestions in dashboard ══ */
+function renderActiveSigs() {
+  const active = signalsData.filter(s => (s.drawsRemaining||0) > 0);
+  const wrap = document.getElementById("active-sigs-wrap");
+  const list = document.getElementById("active-sigs-list");
+
+  // Collect all suggested numbers for grid highlight
+  const allSuggest = new Set();
+  const allTrigger = new Set();
+  active.forEach(s => {
+    (s.suggestion||[]).forEach(n => allSuggest.add(n));
+    (s.triggerNums||[]).forEach(n => allTrigger.add(n));
+  });
+
+  // Update grid
+  updateGrid(lastDraw?.numbers, [...allTrigger], [...allSuggest]);
+
+  if (!active.length) { wrap.style.display = "none"; return; }
+  wrap.style.display = "";
   list.innerHTML = "";
-  signals.forEach(s => {
+  active.forEach(s => {
+    const pct = s.duration > 0 ? (s.drawsRemaining / s.duration * 100) : 0;
     const d = document.createElement("div");
-    d.className = "signal-card";
-    const sentHtml = s.sentTo?.length ? `<div class="sent-to">✈️ ${s.sentTo.join(", ")}</div>` : "";
+    d.className = "active-sig";
     d.innerHTML = `
-      <div class="signal-info">
-        <div class="rule-nm">${s.ruleName}</div>
-        <div class="meta">Root ${s.root} · #${s.drawNo} · ${s.timestamp} · ${s.duration} κλ.</div>
-        ${sentHtml}
+      <div class="active-sig-hdr">
+        <span class="active-sig-rule">🎯 ${s.ruleName}</span>
+        <span class="active-sig-meta">Root ${s.root} · #${s.drawNo} · ${s.drawsRemaining} κλ. απομένουν</span>
       </div>
-      <div class="signal-balls">${s.suggestion.slice(0,6).map(n=>`<div class="sball ${ballCls(n)}">${n}</div>`).join("")}${s.suggestion.length>6?`<span style="font-size:.65rem;color:#6b7280;align-self:center">+${s.suggestion.length-6}</span>`:""}</div>`;
+      <div class="active-sig-pills">${s.suggestion.map(n=>`<div class="sp ${ballCls(n)}">${n}</div>`).join("")}</div>
+      <div class="remaining-bar"><div class="remaining-fill" style="width:${pct}%"></div></div>`;
     list.appendChild(d);
   });
 }
 
-function renderRecentSignals() {
-  const recent = signals.slice(0, 3);
-  const wrap = document.getElementById("recent-signals");
-  const list = document.getElementById("recent-signals-list");
-  if (!recent.length) { wrap.style.display = "none"; return; }
-  wrap.style.display = "";
+/* ══ Status fetch ══ */
+async function fetchStatus() {
+  try {
+    const r = await fetch("/api/status");
+    const d = await r.json();
+    isRunning  = d.running;
+    lastDraw   = d.lastDraw;
+    nextTickAt = d.nextTickAt;
+    updateRunBtn();
+    const dot = document.getElementById("status-dot");
+    const txt = document.getElementById("status-text");
+    dot.className = "status-dot " + (isRunning ? "running" : "stopped");
+    txt.textContent = isRunning ? "Εκτελείται" : "Ανενεργό";
+    if (lastDraw) {
+      document.getElementById("draw-no").textContent = "#" + lastDraw.drawNo;
+      const dtEl = document.getElementById("draw-time");
+      if (lastDraw.drawTime) {
+        dtEl.textContent = lastDraw.drawTime.substring(11,16);
+        dtEl.style.display = "";
+      } else { dtEl.style.display = "none"; }
+    }
+    renderActiveSigs();
+  } catch(_){}
+}
+
+/* ══ Signals ══ */
+async function fetchSignals() {
+  try {
+    const r = await fetch("/api/signals");
+    signalsData = await r.json();
+    const badge = document.getElementById("sig-badge");
+    const cnt   = signalsData.length;
+    badge.style.display = cnt > 0 ? "" : "none";
+    badge.textContent   = cnt > 99 ? "99+" : cnt;
+    document.getElementById("sig-count").textContent = cnt;
+    if (activeTab === "signals") renderSignals();
+    renderActiveSigs();
+  } catch(_){}
+}
+
+function renderSignals() {
+  const list = document.getElementById("signals-list");
+  if (!signalsData.length) { list.innerHTML = '<div class="empty">Δεν υπάρχουν σήματα ακόμα</div>'; return; }
   list.innerHTML = "";
-  recent.forEach(s => {
+  signalsData.forEach(s => {
+    const isActive  = (s.drawsRemaining||0) > 0;
+    const evals     = s.evaluations || [];
+    const evalHtml  = evals.map(e => {
+      const cls = e.hits > 0 ? "hit" : "miss";
+      return `<span class="eval-chip ${cls}">#${e.drawNo}: ${e.hits}/${e.total}</span>`;
+    }).join("");
+    const sentHtml  = s.sentTo?.length ? `<div class="sent-lbl">✈️ ${s.sentTo.join(", ")}</div>` : "";
     const d = document.createElement("div");
-    d.className = "signal-card";
+    d.className = "signal-card" + (isActive ? "" : " expired");
     d.innerHTML = `
-      <div class="signal-info">
-        <div class="rule-nm">${s.ruleName}</div>
-        <div class="meta">Root ${s.root} · ${s.timestamp}</div>
+      <div class="signal-top">
+        <span class="signal-rule">${s.ruleName}</span>
+        <span class="signal-meta">Root ${s.root} · #${s.drawNo} · ${s.timestamp}</span>
       </div>
-      <div class="signal-balls">${s.suggestion.slice(0,4).map(n=>`<div class="sball ${ballCls(n)}">${n}</div>`).join("")}</div>`;
+      <div class="signal-top">
+        <div class="signal-balls">${s.suggestion.slice(0,8).map(n=>`<div class="sball ${ballCls(n)}">${n}</div>`).join("")}${s.suggestion.length>8?`<span style="font-size:.6rem;color:#6b7280;align-self:center">+${s.suggestion.length-8}</span>`:""}</div>
+        <span class="signal-meta" style="color:${isActive?"#4ade80":"#6b7280"}">${isActive?s.drawsRemaining+" κλ.":"Έληξε"}</span>
+      </div>
+      ${evals.length ? `<div class="eval-row">${evalHtml}</div>` : ""}
+      ${sentHtml}`;
     list.appendChild(d);
   });
 }
 
 document.getElementById("clear-sigs-btn").addEventListener("click", async () => {
   await fetch("/api/clear-signals", {method:"POST"});
-  signals = [];
+  signalsData = [];
   renderSignals();
-  renderRecentSignals();
+  renderActiveSigs();
   document.getElementById("sig-badge").style.display = "none";
   document.getElementById("sig-count").textContent = "0";
 });
 
-/* ════════ Logs ════════ */
+/* ══ Logs ══ */
 async function fetchLogs() {
   try {
     const r = await fetch("/api/logs");
-    const logs = await r.json();
+    const entries = await r.json();
     const list = document.getElementById("log-list");
-    if (!logs.length) { list.innerHTML = '<div class="empty">Κανένα log ακόμα</div>'; return; }
+    if (!entries.length) { list.innerHTML = '<div class="empty">Κανένα log</div>'; return; }
     list.innerHTML = "";
-    logs.forEach(e => {
+    entries.forEach(e => {
       const d = document.createElement("div");
       d.className = "log-entry";
       d.innerHTML = `<span class="log-ts">${e.timestamp}</span><span class="log-dot ${e.type}"></span><span class="log-msg">${e.message}</span>`;
       list.appendChild(d);
     });
-  } catch(_) {}
+  } catch(_){}
 }
 
 document.getElementById("clear-logs-btn").addEventListener("click", async () => {
-  await fetch("/api/clear-logs", {method:"POST"});
+  await fetch("/api/clear-logs",{method:"POST"});
   document.getElementById("log-list").innerHTML = "";
 });
 
-/* ════════ Rules ════════ */
+/* ══ Manual check ══ */
+document.getElementById("manual-check-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("manual-check-btn");
+  btn.textContent = "Ελέγχει…"; btn.disabled = true;
+  await fetch("/api/check",{method:"POST"});
+  await fetchStatus();
+  await fetchSignals();
+  if (activeTab === "log") fetchLogs();
+  btn.textContent = "🔍 Χειροκίνητος Έλεγχος Τώρα"; btn.disabled = false;
+});
+
+/* ══ Rules ══ */
 function renderRules() {
   if (!cfg) return;
   const list = document.getElementById("rules-list");
@@ -452,24 +530,12 @@ function renderRules() {
     card.innerHTML = `
       <div class="rule-header">
         <span class="rule-name">${rule.name}</span>
-        <label class="toggle">
-          <input type="checkbox" ${rule.enabled?"checked":""} data-idx="${i}" class="rule-toggle"/>
-          <span class="toggle-slider"></span>
-        </label>
+        <label class="toggle"><input type="checkbox" ${rule.enabled?"checked":""} data-idx="${i}" class="rule-toggle"/><span class="toggle-slider"></span></label>
       </div>
       <div class="rule-fields">
-        <div class="rule-field">
-          <label>Trigger Offsets</label>
-          <input type="text" value="${rule.trigger.join(",")}" placeholder="0,1,2,3" data-idx="${i}" class="rule-trigger"/>
-        </div>
-        <div class="rule-field">
-          <label>Πρόταση Offsets</label>
-          <input type="text" value="${rule.offsets.join(",")}" placeholder="0,1,2,10" data-idx="${i}" class="rule-offsets"/>
-        </div>
-        <div class="rule-field">
-          <label>Διάρκεια (κληρώσεις)</label>
-          <input type="number" value="${rule.duration}" min="0" max="20" data-idx="${i}" class="rule-duration"/>
-        </div>
+        <div class="rule-field"><label>Trigger Offsets</label><input type="text" value="${rule.trigger.join(",")}" placeholder="0,1,2,3" data-idx="${i}" class="rule-trigger"/></div>
+        <div class="rule-field"><label>Πρόταση Offsets</label><input type="text" value="${rule.offsets.join(",")}" placeholder="0,1,2,10" data-idx="${i}" class="rule-offsets"/></div>
+        <div class="rule-field"><label>Διάρκεια (κληρώσεις)</label><input type="number" value="${rule.duration}" min="0" max="20" data-idx="${i}" class="rule-duration"/></div>
       </div>`;
     list.appendChild(card);
   });
@@ -477,24 +543,16 @@ function renderRules() {
 
 document.getElementById("save-rules-btn").addEventListener("click", async () => {
   if (!cfg) return;
-  document.querySelectorAll(".rule-toggle").forEach(el => {
-    cfg.rules[+el.dataset.idx].enabled = el.checked;
-  });
-  document.querySelectorAll(".rule-trigger").forEach(el => {
-    cfg.rules[+el.dataset.idx].trigger = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n));
-  });
-  document.querySelectorAll(".rule-offsets").forEach(el => {
-    cfg.rules[+el.dataset.idx].offsets = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n));
-  });
-  document.querySelectorAll(".rule-duration").forEach(el => {
-    cfg.rules[+el.dataset.idx].duration = +el.value || 0;
-  });
-  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({rules:cfg.rules})});
+  document.querySelectorAll(".rule-toggle").forEach(el => { cfg.rules[+el.dataset.idx].enabled = el.checked; });
+  document.querySelectorAll(".rule-trigger").forEach(el => { cfg.rules[+el.dataset.idx].trigger = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n)); });
+  document.querySelectorAll(".rule-offsets").forEach(el => { cfg.rules[+el.dataset.idx].offsets = el.value.split(/[\s,;]+/).map(Number).filter(n=>!isNaN(n)); });
+  document.querySelectorAll(".rule-duration").forEach(el => { cfg.rules[+el.dataset.idx].duration = +el.value||0; });
+  await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rules:cfg.rules})});
   updateCounters();
   alert("Κανόνες αποθηκεύτηκαν!");
 });
 
-/* ════════ Telegram ════════ */
+/* ══ Telegram ══ */
 function renderTelegram() {
   if (!cfg) return;
   document.getElementById("tg-token").value = cfg.token || "";
@@ -505,60 +563,140 @@ function renderTelegram() {
     d.className = "tg-target";
     d.innerHTML = `
       <div class="tg-target-row">
-        <input type="text" placeholder="Label (π.χ. Κύρια Ομάδα)" value="${t.label||""}" data-idx="${i}" class="tg-label"/>
-        <label class="toggle" style="margin-left:4px">
-          <input type="checkbox" ${t.enabled?"checked":""} data-idx="${i}" class="tg-enabled"/>
-          <span class="toggle-slider"></span>
-        </label>
+        <input type="text" placeholder="Label" value="${t.label||""}" data-idx="${i}" class="tg-label"/>
+        <label class="toggle" style="margin-left:4px"><input type="checkbox" ${t.enabled?"checked":""} data-idx="${i}" class="tg-enabled"/><span class="toggle-slider"></span></label>
         <button class="del-btn" data-idx="${i}">✕</button>
       </div>
-      <div class="tg-field">
-        <label>Chat ID / Username</label>
-        <input type="text" placeholder="-1001234567890 ή @channel" value="${t.chatId||""}" data-idx="${i}" class="tg-chatid"/>
-      </div>`;
-    d.querySelector(".del-btn").addEventListener("click", () => {
-      cfg.targets.splice(i, 1);
-      renderTelegram();
-    });
+      <div class="tg-field"><label>Chat ID / Username</label><input type="text" placeholder="-1001234567890 ή @channel" value="${t.chatId||""}" data-idx="${i}" class="tg-chatid"/></div>`;
+    d.querySelector(".del-btn").addEventListener("click", () => { cfg.targets.splice(i,1); renderTelegram(); });
     list.appendChild(d);
   });
 }
 
 document.getElementById("add-target-btn").addEventListener("click", () => {
   if (!cfg) return;
-  cfg.targets.push({id: Date.now().toString(), chatId:"", label:"Νέο Target", enabled:true});
+  cfg.targets.push({id:Date.now().toString(),chatId:"",label:"Νέο Target",enabled:true});
   renderTelegram();
 });
 
 document.getElementById("save-tg-btn").addEventListener("click", async () => {
   if (!cfg) return;
   cfg.token = document.getElementById("tg-token").value.trim();
-  document.querySelectorAll(".tg-label").forEach(el => {
-    cfg.targets[+el.dataset.idx].label = el.value;
-  });
-  document.querySelectorAll(".tg-chatid").forEach(el => {
-    cfg.targets[+el.dataset.idx].chatId = el.value.trim();
-  });
-  document.querySelectorAll(".tg-enabled").forEach(el => {
-    cfg.targets[+el.dataset.idx].enabled = el.checked;
-  });
-  await fetch("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:cfg.token, targets:cfg.targets})});
+  document.querySelectorAll(".tg-label").forEach(el => { cfg.targets[+el.dataset.idx].label = el.value; });
+  document.querySelectorAll(".tg-chatid").forEach(el => { cfg.targets[+el.dataset.idx].chatId = el.value.trim(); });
+  document.querySelectorAll(".tg-enabled").forEach(el => { cfg.targets[+el.dataset.idx].enabled = el.checked; });
+  await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:cfg.token,targets:cfg.targets})});
   updateCounters();
   alert("Telegram ρυθμίσεις αποθηκεύτηκαν!");
 });
 
-/* ════════ Counters ════════ */
+/* ══ Counters ══ */
 function updateCounters() {
   if (!cfg) return;
-  document.getElementById("rules-count").textContent = cfg.rules.filter(r=>r.enabled&&r.trigger.length>0).length;
+  document.getElementById("rules-count").textContent   = cfg.rules.filter(r=>r.enabled&&r.trigger.length>0).length;
   document.getElementById("targets-count").textContent = cfg.targets.filter(t=>t.enabled&&t.chatId).length;
 }
 
-/* ════════ Init & polling ════════ */
+/* ══ BACKTEST ══ */
+function checkRulesLocal(rules, winNums) {
+  const ws = new Set(winNums);
+  const matches = [];
+  for (const rule of rules) {
+    if (!rule.enabled || !rule.trigger.length) continue;
+    for (let root = 1; root <= 80; root++) {
+      const tr = rule.trigger.map(o=>root+o).filter(n=>n>=1&&n<=80);
+      if (tr.length !== rule.trigger.length) continue;
+      if (tr.every(n=>ws.has(n))) {
+        const sugg = rule.offsets.map(o=>root+o).filter(n=>n>=1&&n<=80);
+        matches.push({ruleName:rule.name,ruleId:rule.id,root,suggestion:sugg,duration:rule.duration||1});
+      }
+    }
+  }
+  return matches;
+}
+
+document.getElementById("bt-load-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("bt-load-btn");
+  btn.textContent = "Φορτώνει…"; btn.disabled = true;
+  const btRes = document.getElementById("bt-results");
+  btRes.innerHTML = "";
+
+  try {
+    const r = await fetch("/api/draws?limit=100");
+    const draws = await r.json();
+    if (!draws.length) { btRes.innerHTML = '<div class="bt-empty">Δεν ελήφθησαν κληρώσεις</div>'; btRes.style.display=""; return; }
+
+    // draws sorted oldest→newest (API returns newest first)
+    const sorted = [...draws].reverse();
+
+    // stats per rule
+    const stats = {};
+    if (!cfg) return;
+    cfg.rules.filter(r=>r.enabled&&r.trigger.length>0).forEach(r => {
+      stats[r.id] = {name:r.name,triggers:0,withHit1:0,withHit2:0,totalEvals:0};
+    });
+
+    for (let i = 0; i < sorted.length; i++) {
+      const draw = sorted[i];
+      const matches = checkRulesLocal(cfg.rules, draw.numbers);
+      for (const m of matches) {
+        if (!stats[m.ruleId]) continue;
+        stats[m.ruleId].triggers++;
+        let hit1 = false, hit2 = false;
+        for (let j = 1; j <= m.duration && i+j < sorted.length; j++) {
+          const future = sorted[i+j];
+          const hits = m.suggestion.filter(n => future.numbers.includes(n)).length;
+          if (hits >= 1) hit1 = true;
+          if (hits >= 2) hit2 = true;
+          stats[m.ruleId].totalEvals++;
+        }
+        if (hit1) stats[m.ruleId].withHit1++;
+        if (hit2) stats[m.ruleId].withHit2++;
+      }
+    }
+
+    const rows = Object.values(stats);
+    if (!rows.some(r=>r.triggers>0)) {
+      btRes.innerHTML = '<div class="bt-empty">Κανένας κανόνας δεν ενεργοποιήθηκε στις τελευταίες 100 κληρώσεις</div>';
+      btRes.style.display = "";
+    } else {
+      const wrap = document.createElement("div");
+      wrap.className = "card";
+      wrap.innerHTML = `<div class="card-title">Αποτελέσματα Backtest — ${draws.length} Κληρώσεις</div>
+        <table class="bt-table">
+          <thead><tr><th>Κανόνας</th><th>Triggers</th><th>≥1 Hit</th><th>≥2 Hits</th></tr></thead>
+          <tbody id="bt-tbody"></tbody>
+        </table>`;
+      btRes.appendChild(wrap);
+      btRes.style.display = "";
+      const tbody = document.getElementById("bt-tbody");
+      rows.forEach(r => {
+        const pct1 = r.triggers > 0 ? Math.round(r.withHit1/r.triggers*100) : 0;
+        const pct2 = r.triggers > 0 ? Math.round(r.withHit2/r.triggers*100) : 0;
+        const cls1 = pct1>=60?"good":pct1>=35?"ok":"bad";
+        const cls2 = pct2>=40?"good":pct2>=20?"ok":"bad";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:700;color:#f9fafb;">${r.name}</td>
+          <td style="color:#60a5fa;font-weight:700;">${r.triggers}</td>
+          <td><div style="font-size:.72rem;font-weight:700;">${pct1}%</div><div class="pct-bar"><div class="pct-fill ${cls1}" style="width:${pct1}%"></div></div></td>
+          <td><div style="font-size:.72rem;font-weight:700;">${pct2}%</div><div class="pct-bar"><div class="pct-fill ${cls2}" style="width:${pct2}%"></div></div></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch(e) {
+    btRes.innerHTML = `<div class="bt-empty">Σφάλμα: ${e}</div>`;
+    btRes.style.display = "";
+  } finally {
+    btn.textContent = "📥 Φόρτωση & Ανάλυση"; btn.disabled = false;
+  }
+});
+
+/* ══ Init ══ */
 async function init() {
+  buildGrid();
   const r = await fetch("/api/config");
   cfg = await r.json();
-  document.getElementById("game-sel").value = cfg.gameId || "1100";
   updateCounters();
   await fetchStatus();
   await fetchSignals();
@@ -567,7 +705,8 @@ async function init() {
 init();
 setInterval(fetchStatus,  10000);
 setInterval(fetchSignals, 15000);
-setInterval(() => { if (activeTab === "log") fetchLogs(); }, 10000);
+setInterval(updateCountdown, 1000);
+setInterval(() => { if (activeTab==="log") fetchLogs(); }, 10000);
 </script>
 </body>
 </html>
