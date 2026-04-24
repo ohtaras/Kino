@@ -285,9 +285,18 @@
 
   <!-- ═══ BACKTEST ═══ -->
   <main id="tab-backtest" style="display:none;">
-    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
-      <div class="card-title">Χειροκίνητος Κανόνας — Ανάλυση 100 Κληρώσεων</div>
 
+    <!-- Ανάλυση όλων των ενεργών κανόνων -->
+    <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+      <div class="card-title">Ανάλυση Ενεργών Κανόνων — 100 Κληρώσεις</div>
+      <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;">Τρέχει όλους τους ενεργούς κανόνες από την καρτέλα Κανόνες.</p>
+      <button class="btn btn-blue" id="bt-all-btn">📊 Ανάλυση Όλων των Κανόνων</button>
+    </div>
+    <div id="bt-all-results" style="display:none;flex-direction:column;gap:10px;"></div>
+
+    <!-- Χειροκίνητος κανόνας -->
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card-title">Χειροκίνητος Κανόνας</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="rule-field">
           <label>Trigger Offsets</label>
@@ -302,13 +311,13 @@
           <input type="number" id="bt-duration" value="2" min="1" max="10" style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
         </div>
         <div class="rule-field" style="display:flex;align-items:flex-end;">
-          <p style="font-size:.65rem;color:#6b7280;line-height:1.5;">Offsets από root 1–80.<br/>π.χ. trigger 0,1,2,3 = 4 διαδοχικοί</p>
+          <p style="font-size:.65rem;color:#6b7280;line-height:1.5;">Offsets από root 1–80.<br/>π.χ. 0,1,2,3 = 4 διαδοχικοί</p>
         </div>
       </div>
-
-      <button class="btn btn-blue" id="bt-load-btn">🔬 Εκτέλεση Ανάλυσης</button>
+      <button class="btn btn-blue" id="bt-load-btn">🔬 Ανάλυση Χειροκίνητου Κανόνα</button>
     </div>
     <div id="bt-results" style="display:none;flex-direction:column;gap:10px;"></div>
+
   </main>
 
   <footer>KINO Monitor · api.opap.gr · Greece Time</footer>
@@ -614,6 +623,60 @@ function updateCounters() {
 }
 
 /* ══ BACKTEST ══ */
+async function fetchDrawsSorted() {
+  const r = await fetch("/api/draws?limit=100");
+  const draws = await r.json();
+  return [...draws].reverse(); // oldest → newest
+}
+
+function runBacktest(rules, sorted) {
+  const stats = {};
+  rules.forEach(rule => {
+    stats[rule.id] = {
+      name: rule.name, suggLen: rule.offsets.length,
+      triggerOffsets: rule.trigger, suggOffsets: rule.offsets, duration: rule.duration||1,
+      triggers:0, evalDraws:0, totalHits:0, hitDist:{}
+    };
+  });
+  for (let i = 0; i < sorted.length; i++) {
+    const matches = checkRulesLocal(rules, sorted[i].numbers);
+    for (const m of matches) {
+      const s = stats[m.ruleId];
+      if (!s) continue;
+      s.triggers++;
+      for (let j = 1; j <= m.duration && i+j < sorted.length; j++) {
+        const hits = m.suggestion.filter(n => sorted[i+j].numbers.includes(n)).length;
+        s.evalDraws++;
+        s.totalHits += hits;
+        s.hitDist[hits] = (s.hitDist[hits]||0) + 1;
+      }
+    }
+  }
+  return Object.values(stats);
+}
+
+document.getElementById("bt-all-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("bt-all-btn");
+  btn.textContent = "Φορτώνει…"; btn.disabled = true;
+  const btRes = document.getElementById("bt-all-results");
+  btRes.innerHTML = "";
+  btRes.style.display = "flex";
+  try {
+    if (!cfg) return;
+    const sorted = await fetchDrawsSorted();
+    if (!sorted.length) { btRes.innerHTML='<div class="bt-empty">Δεν ελήφθησαν κληρώσεις</div>'; return; }
+    const activeRules = cfg.rules.filter(r=>r.enabled&&r.trigger.length>0);
+    if (!activeRules.length) { btRes.innerHTML='<div class="bt-empty">Δεν υπάρχουν ενεργοί κανόνες</div>'; return; }
+    const rows = runBacktest(activeRules, sorted).filter(r=>r.triggers>0);
+    if (!rows.length) { btRes.innerHTML=`<div class="bt-empty">Κανένας κανόνας δεν ενεργοποιήθηκε στις ${sorted.length} κληρώσεις</div>`; return; }
+    rows.forEach(r => renderBtResult(r, btRes));
+  } catch(e) {
+    btRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
+  } finally {
+    btn.textContent="📊 Ανάλυση Όλων των Κανόνων"; btn.disabled=false;
+  }
+});
+
 function checkRulesLocal(rules, winNums) {
   const ws = new Set(winNums);
   const matches = [];
@@ -684,52 +747,28 @@ document.getElementById("bt-load-btn").addEventListener("click", async () => {
   const btRes = document.getElementById("bt-results");
   btRes.innerHTML = "";
   btRes.style.display = "flex";
-
   try {
-    // Read manual rule inputs
     const triggerOffsets = parseOffsets(document.getElementById("bt-trigger").value);
     const suggOffsets    = parseOffsets(document.getElementById("bt-offsets").value);
     const duration       = Math.max(1, parseInt(document.getElementById("bt-duration").value)||2);
-
     if (!triggerOffsets.length || !suggOffsets.length) {
       btRes.innerHTML='<div class="bt-empty">Συμπλήρωσε Trigger και Πρόταση Offsets</div>'; return;
     }
-
     const manualRule = {id:"manual", name:"Χειροκίνητος Κανόνας", enabled:true,
                         trigger:triggerOffsets, offsets:suggOffsets, duration};
-
-    const r = await fetch("/api/draws?limit=100");
-    const draws = await r.json();
-    if (!draws.length) { btRes.innerHTML='<div class="bt-empty">Δεν ελήφθησαν κληρώσεις</div>'; return; }
-
-    const sorted = [...draws].reverse();
-    const s = {name:"Χειροκίνητος Κανόνας", suggLen:suggOffsets.length,
-               triggerOffsets, suggOffsets, duration,
-               triggers:0, evalDraws:0, totalHits:0, hitDist:{}};
-
-    for (let i = 0; i < sorted.length; i++) {
-      const matches = checkRulesLocal([manualRule], sorted[i].numbers);
-      for (const m of matches) {
-        s.triggers++;
-        for (let j = 1; j <= duration && i+j < sorted.length; j++) {
-          const hits = m.suggestion.filter(n => sorted[i+j].numbers.includes(n)).length;
-          s.evalDraws++;
-          s.totalHits += hits;
-          s.hitDist[hits] = (s.hitDist[hits]||0) + 1;
-        }
-      }
-    }
-
-    if (s.triggers === 0) {
-      btRes.innerHTML=`<div class="bt-empty">Ο κανόνας δεν ενεργοποιήθηκε καμία φορά στις ${draws.length} κληρώσεις</div>`;
+    const sorted = await fetchDrawsSorted();
+    if (!sorted.length) { btRes.innerHTML='<div class="bt-empty">Δεν ελήφθησαν κληρώσεις</div>'; return; }
+    const rows = runBacktest([manualRule], sorted);
+    const s = rows[0];
+    if (!s || s.triggers === 0) {
+      btRes.innerHTML=`<div class="bt-empty">Ο κανόνας δεν ενεργοποιήθηκε καμία φορά στις ${sorted.length} κληρώσεις</div>`;
       return;
     }
     renderBtResult(s, btRes);
-
   } catch(e) {
     btRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
   } finally {
-    btn.textContent="🔬 Εκτέλεση Ανάλυσης"; btn.disabled=false;
+    btn.textContent="🔬 Ανάλυση Χειροκίνητου Κανόνα"; btn.disabled=false;
   }
 });
 
