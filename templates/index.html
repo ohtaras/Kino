@@ -826,16 +826,18 @@ document.getElementById("rv-run-btn").addEventListener("click", async () => {
     const counts = {};
 
     for (let i = 1; i < draws.length; i++) {
-      const prevSet = new Set(draws[i-1].numbers);
-      const currSet = new Set(draws[i].numbers);
+      const prevNums = draws[i-1].numbers;
+      const currNums = draws[i].numbers;
+      const prevSet  = new Set(prevNums);
+      const currSet  = new Set(currNums);
 
       for (let root = 1; root <= 80; root++) {
-        const tOffs = [], sOffs = [];
+        const tOffs = [], sOffs = [], tNums = [], sNums = [];
         for (let o = 0; o <= offRange; o++) {
           const n = root + o;
           if (n > 80) break;
-          if (prevSet.has(n)) tOffs.push(o);
-          if (currSet.has(n)) sOffs.push(o);
+          if (prevSet.has(n)) { tOffs.push(o); tNums.push(n); }
+          if (currSet.has(n)) { sOffs.push(o); sNums.push(n); }
         }
         if (tOffs.length < minTrig || sOffs.length < minSugg) continue;
 
@@ -844,25 +846,55 @@ document.getElementById("rv-run-btn").addEventListener("click", async () => {
           counts[key] = {trigger: [...tOffs], suggestion: [...sOffs], count: 0, examples: []};
         }
         counts[key].count++;
-        if (counts[key].examples.length < 2) {
-          counts[key].examples.push({root, prev: draws[i-1].drawNo, curr: draws[i].drawNo});
+        if (counts[key].examples.length < 3) {
+          counts[key].examples.push({
+            root,
+            prevDrawNo: draws[i-1].drawNo,
+            currDrawNo: draws[i].drawNo,
+            trigNums:   [...tNums],
+            suggNums:   [...sNums],
+          });
         }
       }
     }
 
-    const top5 = Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,5);
+    // Only patterns appearing more than once
+    const top5 = Object.values(counts)
+      .filter(p => p.count > 1)
+      .sort((a,b)=>b.count-a.count)
+      .slice(0,5);
 
     if (!top5.length) {
-      rvRes.innerHTML='<div class="bt-empty">Δεν βρέθηκαν patterns με τα επιλεγμένα κριτήρια</div>'; return;
+      rvRes.innerHTML='<div class="bt-empty">Δεν βρέθηκαν patterns με >1 εμφανίσεις. Δοκίμασε μικρότερα ελάχιστα.</div>'; return;
     }
 
     top5.forEach((p, rank) => {
-      const exHtml = p.examples.map(e =>
-        `<span style="font-size:.62rem;background:#1f2937;border-radius:4px;padding:2px 6px;color:#9ca3af;">root=${e.root} · #${e.prev}→#${e.curr}</span>`
-      ).join(" ");
-
       const trigStr = p.trigger.join(",");
       const suggStr = p.suggestion.join(",");
+
+      // Build examples HTML with actual numbers
+      const exHtml = p.examples.map(e => `
+        <div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 10px;margin-top:6px;">
+          <div style="font-size:.62rem;color:#6b7280;margin-bottom:5px;">
+            Root <span style="color:#a78bfa;font-weight:700;">${e.root}</span> · Κλ.
+            <span style="color:#f59e0b;">#${e.prevDrawNo}</span> → <span style="color:#22c55e;">#${e.currDrawNo}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:.58rem;color:#f59e0b;margin-bottom:3px;">TRIGGER (#${e.prevDrawNo})</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                ${e.trigNums.map(n=>`<div class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.55rem;">${n}</div>`).join("")}
+              </div>
+            </div>
+            <div style="color:#374151;align-self:center;font-size:1rem;padding-top:14px;">→</div>
+            <div>
+              <div style="font-size:.58rem;color:#22c55e;margin-bottom:3px;">ΠΡΟΤΑΣΗ (#${e.currDrawNo})</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                ${e.suggNums.map(n=>`<div class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.55rem;border:1px solid #22c55e;">${n}</div>`).join("")}
+              </div>
+            </div>
+          </div>
+        </div>`).join("");
 
       const card = document.createElement("div");
       card.className = "card";
@@ -874,20 +906,18 @@ document.getElementById("rv-run-btn").addEventListener("click", async () => {
             → Ανάλυση
           </button>
         </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:4px;">
           <div>
-            <div style="font-size:.6rem;color:#f59e0b;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Trigger (προηγούμενη)</div>
-            <div style="font-size:.75rem;font-weight:700;color:#f59e0b;font-family:monospace;">[${trigStr}]</div>
-            <div style="font-size:.62rem;color:#6b7280;">${p.trigger.length} αριθμοί</div>
+            <div style="font-size:.58rem;color:#f59e0b;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Trigger Offsets</div>
+            <div style="font-size:.72rem;font-weight:700;color:#f59e0b;font-family:monospace;">[${trigStr}]</div>
           </div>
-          <div style="color:#374151;align-self:center;font-size:1.2rem;">→</div>
+          <div style="color:#374151;align-self:center;font-size:1rem;">→</div>
           <div>
-            <div style="font-size:.6rem;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Πρόταση (τρέχουσα)</div>
-            <div style="font-size:.75rem;font-weight:700;color:#22c55e;font-family:monospace;">[${suggStr}]</div>
-            <div style="font-size:.62rem;color:#6b7280;">${p.suggestion.length} αριθμοί</div>
+            <div style="font-size:.58rem;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Πρόταση Offsets</div>
+            <div style="font-size:.72rem;font-weight:700;color:#22c55e;font-family:monospace;">[${suggStr}]</div>
           </div>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">${exHtml}</div>`;
+        ${exHtml}`;
       rvRes.appendChild(card);
     });
 
