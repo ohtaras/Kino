@@ -1043,54 +1043,45 @@ document.getElementById("tx-run-btn").addEventListener("click", async () => {
       txRes.innerHTML=`<div class="bt-empty">Το trigger πυροδότησε ${totalTrigFires} φορές αλλά καμία πρόταση δεν εμφανίστηκε ≥${minCount} φορές.</div>`; return;
     }
 
-    // Header card
+    // Summary header
     const hdr = document.createElement("div");
     hdr.className = "card";
-    hdr.innerHTML = `<div style="font-size:.72rem;color:#9ca3af;">
-      Trigger <span style="color:#f59e0b;font-weight:700;">[${trigOffs.join(",")}]</span>
-      πυροδότησε <span style="color:#60a5fa;font-weight:700;">${totalTrigFires}</span> φορές σε ${draws.length} κληρώσεις.
-      Προτάσεις με ≥<span style="color:#facc15;font-weight:700;">${minCount}</span> εμφανίσεις:
-    </div>`;
+    hdr.innerHTML = `
+      <div style="font-size:.75rem;margin-bottom:4px;">
+        Trigger <span style="color:#f59e0b;font-weight:700;font-family:monospace;">[${trigOffs.join(",")}]</span>
+        πυροδότησε <span style="color:#60a5fa;font-weight:800;">${totalTrigFires}</span> φορές στις ${draws.length} κληρώσεις.
+      </div>
+      <div style="font-size:.65rem;color:#6b7280;">Παρακάτω οι προτάσεις με ≥${minCount} εμφανίσεις, ταξινομημένες:</div>`;
     txRes.appendChild(hdr);
 
+    // Simple list card
+    const listCard = document.createElement("div");
+    listCard.className = "card";
+    listCard.style.padding = "10px 12px";
+    let listHtml = "";
     results.forEach((s, rank) => {
       const suggStr = s.offsets.join(",");
-      const exHtml = s.examples.map(e=>`
-        <div style="background:#0d1117;border:1px solid #1f2937;border-radius:7px;padding:7px 9px;margin-top:4px;">
-          <div style="font-size:.58rem;color:#6b7280;margin-bottom:3px;">
-            Root <span style="color:#a78bfa;font-weight:700;">${e.root}</span> ·
-            <span style="color:#f59e0b;">#${e.prevDrawNo}</span> → <span style="color:#22c55e;">#${e.currDrawNo}</span>
-          </div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
-            <div>
-              <div style="font-size:.54rem;color:#f59e0b;margin-bottom:2px;">TRIGGER</div>
-              <div style="display:flex;gap:2px;">${e.trigNums.map(n=>`<div class="sball ${ballCls(n)}" style="width:21px;height:21px;font-size:.53rem;">${n}</div>`).join("")}</div>
-            </div>
-            <div style="color:#374151;align-self:center;padding-top:13px;">→</div>
-            <div>
-              <div style="font-size:.54rem;color:#22c55e;margin-bottom:2px;">ΠΡΟΤΑΣΗ</div>
-              <div style="display:flex;gap:2px;flex-wrap:wrap;">${e.suggNums.map(n=>`<div class="sball ${ballCls(n)}" style="width:21px;height:21px;font-size:.53rem;border:1px solid #22c55e;">${n}</div>`).join("")}</div>
-            </div>
-          </div>
-        </div>`).join("");
-
       const pct = Math.round(s.count/totalTrigFires*100);
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.cssText = "border-left:3px solid #22c55e;border-radius:0 14px 14px 0;";
-      card.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <div>
-            <span style="font-size:.78rem;font-weight:700;color:#22c55e;">${s.count}×</span>
-            <span style="font-size:.62rem;color:#6b7280;margin-left:4px;">(${pct}% των triggers)</span>
-          </div>
+      // Compact actual numbers from first example
+      const ex = s.examples[0];
+      const exNums = ex ? ex.suggNums.map(n=>`<span class="sball ${ballCls(n)}" style="width:20px;height:20px;font-size:.52rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;">${n}</span>`).join("") : "";
+
+      listHtml += `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1f2937;flex-wrap:wrap;">
+          <span style="font-size:.65rem;color:#6b7280;width:16px;flex-shrink:0;">${rank+1}.</span>
+          <span style="font-family:monospace;font-size:.7rem;color:#f59e0b;flex-shrink:0;">[${trigOffs.join(",")}]</span>
+          <span style="color:#374151;flex-shrink:0;">→</span>
+          <span style="font-family:monospace;font-size:.7rem;color:#22c55e;flex-shrink:0;">[${suggStr}]</span>
+          <span style="font-size:.72rem;font-weight:800;color:#facc15;flex-shrink:0;">${s.count} φορές</span>
+          <span style="font-size:.62rem;color:#4b5563;">(${pct}%)</span>
           <button onclick="useInBacktest('${trigOffs.join(",")}','${suggStr}')"
-            style="background:#1d4ed8;border:none;color:#fff;border-radius:6px;padding:3px 9px;font-size:.62rem;font-weight:700;cursor:pointer;">→ Ανάλυση</button>
+            style="background:#1d4ed8;border:none;color:#fff;border-radius:5px;padding:2px 8px;font-size:.6rem;font-weight:700;cursor:pointer;margin-left:auto;">→ Ανάλυση</button>
         </div>
-        <div style="font-size:.68rem;font-weight:700;color:#22c55e;font-family:monospace;margin-bottom:4px;">[${suggStr}]</div>
-        ${exHtml}`;
-      txRes.appendChild(card);
+        ${ex?`<div style="display:flex;gap:2px;flex-wrap:wrap;padding:4px 0 6px 24px;border-bottom:1px solid #111827;">${exNums}<span style="font-size:.58rem;color:#4b5563;align-self:center;margin-left:3px;">π.χ. Κλ.#${ex.currDrawNo} root=${ex.root}</span></div>`:""}`;
     });
+    listHtml = listHtml.replace(/border-bottom:1px solid #1f2937;(?=[^}]*<\/div>\s*$)/, "border-bottom:none;"); // remove last border
+    listCard.innerHTML = listHtml;
+    txRes.appendChild(listCard);
 
   } catch(e) {
     txRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
