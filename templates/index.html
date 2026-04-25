@@ -384,6 +384,30 @@
     </div>
     <div id="tx-results" style="display:none;flex-direction:column;gap:8px;"></div>
 
+    <!-- Αξιολόγηση Trigger+Suggestion: per-occurrence hits -->
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card-title">📋 Αξιολόγηση: Trigger + Πρόταση — Hits ανά Κλήρωση</div>
+      <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;">
+        Ορίζεις trigger <strong style="color:#f59e0b;">και</strong> πρόταση offsets.
+        Για κάθε κλήρωση που πυροδότησε ο trigger, δείχνει τους πραγματικούς αριθμούς
+        και πόσοι από τους αριθμούς πρότασης βγήκαν (6/6, 5/6…).
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="rule-field">
+          <label>Trigger Offsets</label>
+          <input type="text" id="ev-trigger" placeholder="π.χ. 0,11,12,20"
+            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
+        </div>
+        <div class="rule-field">
+          <label>Πρόταση Offsets</label>
+          <input type="text" id="ev-sugg" placeholder="π.χ. 17,18,19,20,21,22"
+            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
+        </div>
+      </div>
+      <button class="btn btn-blue" id="ev-run-btn">📋 Ανάλυση ανά Κλήρωση</button>
+    </div>
+    <div id="ev-results" style="display:none;flex-direction:column;gap:6px;"></div>
+
   </main>
 
   <footer>KINO Monitor · api.opap.gr · Greece Time</footer>
@@ -1087,6 +1111,121 @@ document.getElementById("tx-run-btn").addEventListener("click", async () => {
     txRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
   } finally {
     btn.textContent="🔎 Εύρεση Προτάσεων"; btn.disabled=false;
+  }
+});
+
+/* ══ Αξιολόγηση Trigger+Suggestion per occurrence ══ */
+document.getElementById("ev-run-btn").addEventListener("click", async () => {
+  const btn   = document.getElementById("ev-run-btn");
+  const evRes = document.getElementById("ev-results");
+  btn.textContent = "Αναλύει…"; btn.disabled = true;
+  evRes.innerHTML = ""; evRes.style.display = "flex";
+
+  try {
+    const trigOffs = parseOffsets(document.getElementById("ev-trigger").value);
+    const suggOffs = parseOffsets(document.getElementById("ev-sugg").value);
+    if (!trigOffs.length || !suggOffs.length) {
+      evRes.innerHTML='<div class="bt-empty">Συμπλήρωσε και τα δύο πεδία</div>'; return;
+    }
+    const N = suggOffs.length;
+
+    const draws = await fetchDrawsSorted();
+    if (draws.length < 2) { evRes.innerHTML='<div class="bt-empty">Ανεπαρκείς κληρώσεις</div>'; return; }
+
+    const occurrences = [];  // {drawNo, root, trigNums, suggNums, hits}
+    const hitDist = {};
+
+    for (let i = 0; i < draws.length - 1; i++) {
+      const prevSet = new Set(draws[i].numbers);
+      const nextSet = new Set(draws[i+1].numbers);
+
+      for (let root = 1; root <= 80; root++) {
+        // Exact trigger check
+        const allTrigOk = trigOffs.every(o => { const n=root+o; return n>=1&&n<=80&&prevSet.has(n); });
+        if (!allTrigOk) continue;
+        // No extra numbers in range (exact)
+        const maxOff = Math.max(...trigOffs);
+        let extraInRange = false;
+        for (let o = 0; o <= maxOff; o++) {
+          const n = root+o; if (n>80) break;
+          if (prevSet.has(n) && !trigOffs.includes(o)) { extraInRange=true; break; }
+        }
+        if (extraInRange) continue;
+
+        // Count suggestion hits in next draw
+        const suggNums   = suggOffs.map(o=>root+o).filter(n=>n>=1&&n<=80);
+        const trigNums   = trigOffs.map(o=>root+o);
+        const hitNums    = suggNums.filter(n=>nextSet.has(n));
+        const hits       = hitNums.length;
+
+        hitDist[hits] = (hitDist[hits]||0) + 1;
+        occurrences.push({
+          drawNo:   draws[i].drawNo,
+          nextDrawNo: draws[i+1].drawNo,
+          root, trigNums, suggNums, hitNums, hits
+        });
+      }
+    }
+
+    if (!occurrences.length) {
+      evRes.innerHTML=`<div class="bt-empty">Ο trigger δεν πυροδότησε καμία φορά στις ${draws.length} κληρώσεις.</div>`; return;
+    }
+
+    // Sort by hits desc, then drawNo
+    occurrences.sort((a,b) => b.hits-a.hits || b.drawNo-a.drawNo);
+    const total = occurrences.length;
+
+    // Summary card
+    const sumCard = document.createElement("div");
+    sumCard.className = "card";
+    let distHtml = "";
+    for (let k = N; k >= 0; k--) {
+      const cnt = hitDist[k]||0; if (!cnt && k < N-2) continue;
+      const pct = Math.round(cnt/total*100);
+      const col = k===N?"#4ade80":k>=Math.ceil(N*0.6)?pctColor(pct):k===0?"#374151":pctColor(pct);
+      distHtml += `<span style="background:#1f2937;border-radius:5px;padding:3px 8px;font-size:.68rem;color:${col};font-weight:700;">${k}/${N}: ${cnt}× (${pct}%)</span>`;
+    }
+    sumCard.innerHTML = `
+      <div style="font-size:.75rem;margin-bottom:8px;">
+        Trigger <span style="color:#f59e0b;font-weight:700;font-family:monospace;">[${trigOffs.join(",")}]</span>
+        → Πρόταση <span style="color:#22c55e;font-weight:700;font-family:monospace;">[${suggOffs.join(",")}]</span>
+        · <span style="color:#60a5fa;font-weight:800;">${total}</span> φορές
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">${distHtml}</div>`;
+    evRes.appendChild(sumCard);
+
+    // Per-occurrence list
+    const listCard = document.createElement("div");
+    listCard.className = "card";
+    listCard.style.padding = "8px 12px";
+    let rows = "";
+    occurrences.forEach(oc => {
+      const hitSet = new Set(oc.hitNums);
+      const col = oc.hits===N?"#4ade80":oc.hits>=Math.ceil(N*0.6)?pctColor(Math.round(oc.hits/N*100)):"#6b7280";
+      const suggBalls = oc.suggNums.map(n => {
+        const hit = hitSet.has(n);
+        return `<span class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;opacity:${hit?1:.3};${hit?"outline:2px solid #22c55e;outline-offset:1px;":""}">${n}</span>`;
+      }).join("");
+      const trigBalls = oc.trigNums.map(n =>
+        `<span class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;">${n}</span>`
+      ).join("");
+      rows += `
+        <div style="padding:6px 0;border-bottom:1px solid #111827;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          <span style="font-size:.62rem;color:#4b5563;width:90px;flex-shrink:0;">#${oc.drawNo}→#${oc.nextDrawNo}</span>
+          <span style="font-size:.6rem;color:#6b7280;flex-shrink:0;">r=${oc.root}</span>
+          <span style="display:flex;gap:2px;">${trigBalls}</span>
+          <span style="color:#374151;font-size:.9rem;">→</span>
+          <span style="display:flex;gap:2px;flex-wrap:wrap;">${suggBalls}</span>
+          <span style="font-weight:800;font-size:.75rem;color:${col};margin-left:auto;">${oc.hits}/${N}</span>
+        </div>`;
+    });
+    listCard.innerHTML = rows;
+    evRes.appendChild(listCard);
+
+  } catch(e) {
+    evRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
+  } finally {
+    btn.textContent="📋 Ανάλυση ανά Κλήρωση"; btn.disabled=false;
   }
 });
 
