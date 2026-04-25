@@ -384,28 +384,21 @@
     </div>
     <div id="tx-results" style="display:none;flex-direction:column;gap:8px;"></div>
 
-    <!-- Αξιολόγηση Trigger+Suggestion: per-occurrence hits -->
+    <!-- Αξιολόγηση Trigger: τι βγήκε μετά -->
     <div class="card" style="display:flex;flex-direction:column;gap:10px;">
-      <div class="card-title">📋 Αξιολόγηση: Trigger + Πρόταση — Hits ανά Κλήρωση</div>
+      <div class="card-title">📋 Trigger → Τι βγήκε μετά</div>
       <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;">
-        Βάλε <strong style="color:#f59e0b;">πραγματικούς αριθμούς</strong> trigger και πρόταση.
-        Το σύστημα βρίσκει μόνο του το μοτίβο (offsets) και ψάχνει σε όλες τις κληρώσεις
-        πόσες φορές εμφανίστηκε — και πόσοι από τους αριθμούς πρότασης βγήκαν (6/6, 5/6…).
+        Βάλε τους <strong style="color:#f59e0b;">πραγματικούς αριθμούς</strong> που αποτελούν το trigger.
+        Το σύστημα βρίσκει κάθε φορά που εμφανίστηκε αυτό το μοτίβο και δείχνει
+        <em>τι βγήκε πραγματικά</em> στην επόμενη κλήρωση — ώστε να δεις ποια offsets επαναλαμβάνονται.
       </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div class="rule-field">
-          <label>Αριθμοί Trigger (πραγματικοί)</label>
-          <input type="text" id="ev-trigger" placeholder="π.χ. 21,32,33,41"
-            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
-        </div>
-        <div class="rule-field">
-          <label>Αριθμοί Πρότασης (πραγματικοί)</label>
-          <input type="text" id="ev-sugg" placeholder="π.χ. 38,39,40,41,42,43"
-            style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
-        </div>
+      <div class="rule-field">
+        <label>Αριθμοί Trigger (πραγματικοί)</label>
+        <input type="text" id="ev-trigger" placeholder="π.χ. 21,32,33,41"
+          style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
       </div>
-      <div id="ev-derived" style="font-size:.68rem;color:#6b7280;min-height:18px;"></div>
-      <button class="btn btn-blue" id="ev-run-btn">📋 Ανάλυση ανά Κλήρωση</button>
+      <div id="ev-derived" style="font-size:.68rem;color:#6b7280;min-height:16px;"></div>
+      <button class="btn btn-blue" id="ev-run-btn">📋 Ανάλυση</button>
     </div>
     <div id="ev-results" style="display:none;flex-direction:column;gap:6px;"></div>
 
@@ -1122,27 +1115,16 @@ function numsToOffsets(nums) {
   return { root, offsets: sorted.map(n=>n-root) };
 }
 
-/* show derived offsets as user types */
-["ev-trigger","ev-sugg"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    const tNums = parseOffsets(document.getElementById("ev-trigger").value);
-    const sNums = parseOffsets(document.getElementById("ev-sugg").value);
-    const d = document.getElementById("ev-derived");
-    if (!tNums.length && !sNums.length) { d.textContent=""; return; }
-    const parts = [];
-    if (tNums.length) {
-      const {root,offsets} = numsToOffsets(tNums);
-      parts.push(`Trigger root=${root} offsets=[${offsets.join(",")}]`);
-    }
-    if (sNums.length) {
-      const {root,offsets} = numsToOffsets(sNums);
-      parts.push(`Πρόταση root=${root} offsets=[${offsets.join(",")}]`);
-    }
-    d.textContent = "→ " + parts.join("  ·  ");
-  });
+/* show derived trigger offsets as user types */
+document.getElementById("ev-trigger").addEventListener("input", () => {
+  const tNums = parseOffsets(document.getElementById("ev-trigger").value);
+  const d = document.getElementById("ev-derived");
+  if (!tNums.length) { d.textContent=""; return; }
+  const {root, offsets} = numsToOffsets(tNums);
+  d.textContent = `→ root=${root}  offsets=[${offsets.join(",")}]`;
 });
 
-/* ══ Αξιολόγηση Trigger+Suggestion per occurrence ══ */
+/* ══ Trigger → Τι βγήκε μετά (discovery mode) ══ */
 document.getElementById("ev-run-btn").addEventListener("click", async () => {
   const btn   = document.getElementById("ev-run-btn");
   const evRes = document.getElementById("ev-results");
@@ -1151,104 +1133,102 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
 
   try {
     const trigNums = parseOffsets(document.getElementById("ev-trigger").value);
-    const suggNums = parseOffsets(document.getElementById("ev-sugg").value);
-    if (!trigNums.length || !suggNums.length) {
-      evRes.innerHTML='<div class="bt-empty">Συμπλήρωσε και τα δύο πεδία</div>'; return;
+    if (!trigNums.length) {
+      evRes.innerHTML='<div class="bt-empty">Συμπλήρωσε τους αριθμούς trigger</div>'; return;
     }
 
-    // Derive offsets from the actual numbers
     const { root: tRoot, offsets: trigOffs } = numsToOffsets(trigNums);
-    const { root: sRoot, offsets: suggOffsRaw } = numsToOffsets(suggNums);
-    // Express suggestion offsets relative to the trigger root
-    const suggOffs = suggNums.map(n => n - tRoot).sort((a,b)=>a-b);
-    const N = suggOffs.length;
-
     const draws = await fetchDrawsSorted();
     if (draws.length < 2) { evRes.innerHTML='<div class="bt-empty">Ανεπαρκείς κληρώσεις</div>'; return; }
 
     const occurrences = [];
-    const hitDist = {};
+    const offDist = {}; // relative offset → count across all next-draws
 
     for (let i = 0; i < draws.length - 1; i++) {
       const prevSet = new Set(draws[i].numbers);
-      const nextSet = new Set(draws[i+1].numbers);
 
       for (let root = 1; root <= 80; root++) {
         // Exact trigger check
         const allTrigOk = trigOffs.every(o => { const n=root+o; return n>=1&&n<=80&&prevSet.has(n); });
         if (!allTrigOk) continue;
-        // No extra numbers in the trigger range (exact pattern)
         const maxOff = Math.max(...trigOffs);
-        let extraInRange = false;
-        for (let o = 0; o <= maxOff; o++) {
-          const n = root+o; if (n>80) break;
-          if (prevSet.has(n) && !trigOffs.includes(o)) { extraInRange=true; break; }
+        let extra = false;
+        for (let o=0; o<=maxOff; o++) {
+          const n=root+o; if(n>80) break;
+          if(prevSet.has(n) && !trigOffs.includes(o)){extra=true;break;}
         }
-        if (extraInRange) continue;
+        if(extra) continue;
 
-        // Count suggestion hits in next draw
-        const sNums   = suggOffs.map(o=>root+o).filter(n=>n>=1&&n<=80);
-        const tNums   = trigOffs.map(o=>root+o);
-        const hitArr  = sNums.filter(n=>nextSet.has(n));
-        const hits    = hitArr.length;
+        // Collect next draw numbers with their offset relative to this root
+        const nextNums = draws[i+1].numbers
+          .map(n => ({ num: n, off: n - root }))
+          .sort((a,b)=>a.num-b.num);
+        nextNums.forEach(({off}) => { offDist[off] = (offDist[off]||0) + 1; });
 
-        hitDist[hits] = (hitDist[hits]||0) + 1;
         occurrences.push({
           drawNo: draws[i].drawNo, nextDrawNo: draws[i+1].drawNo,
-          root, trigNums: tNums, suggNums: sNums, hitNums: hitArr, hits
+          root, trigActual: trigOffs.map(o=>root+o), nextNums
         });
       }
     }
 
     if (!occurrences.length) {
-      evRes.innerHTML=`<div class="bt-empty">Ο trigger δεν πυροδότησε καμία φορά στις ${draws.length} κληρώσεις.</div>`; return;
+      evRes.innerHTML=`<div class="bt-empty">Δεν βρέθηκαν εμφανίσεις σε ${draws.length} κληρώσεις.</div>`; return;
     }
 
-    occurrences.sort((a,b) => b.hits-a.hits || b.drawNo-a.drawNo);
     const total = occurrences.length;
+
+    // Determine "hot" offsets: appear in ≥30% of occurrences
+    const hotOffsets = new Set(
+      Object.entries(offDist)
+        .filter(([,cnt]) => cnt / total >= 0.30)
+        .map(([o]) => parseInt(o))
+    );
+
+    // Top offsets for summary chip row
+    const topOffs = Object.entries(offDist)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0, 15);
 
     // Summary card
     const sumCard = document.createElement("div");
     sumCard.className = "card";
-    let distHtml = "";
-    for (let k = N; k >= 0; k--) {
-      const cnt = hitDist[k]||0; if (!cnt && k < N-2) continue;
+    const topHtml = topOffs.map(([o,cnt]) => {
       const pct = Math.round(cnt/total*100);
-      const col = k===N?"#4ade80":k>=Math.ceil(N*0.6)?pctColor(pct):k===0?"#374151":pctColor(pct);
-      distHtml += `<span style="background:#1f2937;border-radius:5px;padding:3px 8px;font-size:.68rem;color:${col};font-weight:700;">${k}/${N}: ${cnt}× (${pct}%)</span>`;
-    }
+      const col = pct>=50?"#4ade80":pct>=30?"#fbbf24":"#9ca3af";
+      return `<span style="background:#1f2937;border-radius:5px;padding:3px 8px;font-size:.68rem;color:${col};font-weight:700;">+${o}: ${cnt}× (${pct}%)</span>`;
+    }).join("");
     sumCard.innerHTML = `
       <div style="font-size:.75rem;margin-bottom:8px;">
         Trigger <span style="color:#f59e0b;font-weight:700;font-family:monospace;">[${trigOffs.join(",")}]</span>
-        → Πρόταση <span style="color:#22c55e;font-weight:700;font-family:monospace;">[${suggOffs.join(",")}]</span>
-        · <span style="color:#60a5fa;font-weight:800;">${total}</span> φορές
+        · βρέθηκε <span style="color:#60a5fa;font-weight:800;">${total}</span> φορές σε ${draws.length} κληρώσεις
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;">${distHtml}</div>`;
+      <div style="font-size:.62rem;color:#6b7280;margin-bottom:5px;">Πιο συχνά offsets στην επόμενη κλήρωση <span style="color:#4ade80;">≥50%</span> <span style="color:#fbbf24;">≥30%</span>:</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${topHtml}</div>`;
     evRes.appendChild(sumCard);
 
-    // Per-occurrence list
+    // Per-occurrence list: each row = trigger balls → next-draw 20 balls with offset labels
     const listCard = document.createElement("div");
     listCard.className = "card";
     listCard.style.padding = "8px 12px";
     let rows = "";
     occurrences.forEach(oc => {
-      const hitSet = new Set(oc.hitNums);
-      const col = oc.hits===N?"#4ade80":oc.hits>=Math.ceil(N*0.6)?pctColor(Math.round(oc.hits/N*100)):"#6b7280";
-      const suggBalls = oc.suggNums.map(n => {
-        const hit = hitSet.has(n);
-        return `<span class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;opacity:${hit?1:.3};${hit?"outline:2px solid #22c55e;outline-offset:1px;":""}">${n}</span>`;
-      }).join("");
-      const trigBalls = oc.trigNums.map(n =>
-        `<span class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;">${n}</span>`
+      const trigBalls = oc.trigActual.map(n =>
+        `<span class="sball ${ballCls(n)}" style="width:22px;height:22px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;outline:2px solid #f59e0b;outline-offset:1px;">${n}</span>`
       ).join("");
+      const nextBalls = oc.nextNums.map(({num, off}) => {
+        const hot = hotOffsets.has(off);
+        return `<span class="sball ${ballCls(num)}" title="off=${off}"
+          style="width:24px;height:24px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;opacity:${hot?1:.22};${hot?"outline:2px solid #22c55e;outline-offset:1px;":""}">${num}</span>`;
+      }).join("");
       rows += `
-        <div style="padding:6px 0;border-bottom:1px solid #111827;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-          <span style="font-size:.62rem;color:#4b5563;width:90px;flex-shrink:0;">#${oc.drawNo}→#${oc.nextDrawNo}</span>
-          <span style="font-size:.6rem;color:#6b7280;flex-shrink:0;">r=${oc.root}</span>
-          <span style="display:flex;gap:2px;">${trigBalls}</span>
-          <span style="color:#374151;font-size:.9rem;">→</span>
-          <span style="display:flex;gap:2px;flex-wrap:wrap;">${suggBalls}</span>
-          <span style="font-weight:800;font-size:.75rem;color:${col};margin-left:auto;">${oc.hits}/${N}</span>
+        <div style="padding:7px 0;border-bottom:1px solid #111827;">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
+            <span style="font-size:.6rem;color:#4b5563;width:88px;flex-shrink:0;">#${oc.drawNo}→#${oc.nextDrawNo}</span>
+            <span style="font-size:.58rem;color:#6b7280;">r=${oc.root}</span>
+            <span style="display:flex;gap:2px;">${trigBalls}</span>
+          </div>
+          <div style="display:flex;gap:2px;flex-wrap:wrap;padding-left:96px;">${nextBalls}</div>
         </div>`;
     });
     listCard.innerHTML = rows;
@@ -1257,7 +1237,7 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
   } catch(e) {
     evRes.innerHTML=`<div class="bt-empty">Σφάλμα: ${e}</div>`;
   } finally {
-    btn.textContent="📋 Ανάλυση ανά Κλήρωση"; btn.disabled=false;
+    btn.textContent="📋 Ανάλυση"; btn.disabled=false;
   }
 });
 
