@@ -1196,7 +1196,8 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
     const topHtml = topOffs.map(([o,cnt]) => {
       const pct = Math.round(cnt/total*100);
       const col = pct>=50?"#4ade80":pct>=30?"#fbbf24":"#9ca3af";
-      return `<span style="background:#1f2937;border-radius:5px;padding:3px 8px;font-size:.68rem;color:${col};font-weight:700;">+${o}: ${cnt}× (${pct}%)</span>`;
+      const lbl = (parseInt(o)>=0?"+":"")+o;
+      return `<span style="background:#1f2937;border-radius:5px;padding:3px 8px;font-size:.68rem;color:${col};font-weight:700;">${lbl}: ${cnt}× (${pct}%)</span>`;
     }).join("");
     sumCard.innerHTML = `
       <div style="font-size:.75rem;margin-bottom:8px;">
@@ -1218,8 +1219,10 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
       ).join("");
       const nextBalls = oc.nextNums.map(({num, off}) => {
         const hot = hotOffsets.has(off);
-        return `<span class="sball ${ballCls(num)}" title="off=${off}"
-          style="width:24px;height:24px;font-size:.54rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;opacity:${hot?1:.22};${hot?"outline:2px solid #22c55e;outline-offset:1px;":""}">${num}</span>`;
+        const lbl = (off >= 0 ? "+" : "") + off;
+        const fs = Math.abs(off) >= 10 ? ".48rem" : ".54rem";
+        return `<span class="sball ${ballCls(num)}" title="${num}"
+          style="width:28px;height:28px;font-size:${fs};display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;opacity:${hot?1:.18};${hot?"outline:2px solid #22c55e;outline-offset:1px;":""}">${lbl}</span>`;
       }).join("");
       rows += `
         <div style="padding:7px 0;border-bottom:1px solid #111827;">
