@@ -388,22 +388,23 @@
     <div class="card" style="display:flex;flex-direction:column;gap:10px;">
       <div class="card-title">📋 Αξιολόγηση: Trigger + Πρόταση — Hits ανά Κλήρωση</div>
       <p style="font-size:.72rem;color:#9ca3af;line-height:1.5;">
-        Ορίζεις trigger <strong style="color:#f59e0b;">και</strong> πρόταση offsets.
-        Για κάθε κλήρωση που πυροδότησε ο trigger, δείχνει τους πραγματικούς αριθμούς
-        και πόσοι από τους αριθμούς πρότασης βγήκαν (6/6, 5/6…).
+        Βάλε <strong style="color:#f59e0b;">πραγματικούς αριθμούς</strong> trigger και πρόταση.
+        Το σύστημα βρίσκει μόνο του το μοτίβο (offsets) και ψάχνει σε όλες τις κληρώσεις
+        πόσες φορές εμφανίστηκε — και πόσοι από τους αριθμούς πρότασης βγήκαν (6/6, 5/6…).
       </p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="rule-field">
-          <label>Trigger Offsets</label>
-          <input type="text" id="ev-trigger" placeholder="π.χ. 0,11,12,20"
+          <label>Αριθμοί Trigger (πραγματικοί)</label>
+          <input type="text" id="ev-trigger" placeholder="π.χ. 21,32,33,41"
             style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
         </div>
         <div class="rule-field">
-          <label>Πρόταση Offsets</label>
-          <input type="text" id="ev-sugg" placeholder="π.χ. 17,18,19,20,21,22"
+          <label>Αριθμοί Πρότασης (πραγματικοί)</label>
+          <input type="text" id="ev-sugg" placeholder="π.χ. 38,39,40,41,42,43"
             style="background:#1f2937;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:7px 10px;font-size:.78rem;width:100%;outline:none;"/>
         </div>
       </div>
+      <div id="ev-derived" style="font-size:.68rem;color:#6b7280;min-height:18px;"></div>
       <button class="btn btn-blue" id="ev-run-btn">📋 Ανάλυση ανά Κλήρωση</button>
     </div>
     <div id="ev-results" style="display:none;flex-direction:column;gap:6px;"></div>
@@ -1114,6 +1115,33 @@ document.getElementById("tx-run-btn").addEventListener("click", async () => {
   }
 });
 
+/* ── derive offsets from actual numbers ── */
+function numsToOffsets(nums) {
+  const sorted = [...nums].sort((a,b)=>a-b);
+  const root = sorted[0];
+  return { root, offsets: sorted.map(n=>n-root) };
+}
+
+/* show derived offsets as user types */
+["ev-trigger","ev-sugg"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    const tNums = parseOffsets(document.getElementById("ev-trigger").value);
+    const sNums = parseOffsets(document.getElementById("ev-sugg").value);
+    const d = document.getElementById("ev-derived");
+    if (!tNums.length && !sNums.length) { d.textContent=""; return; }
+    const parts = [];
+    if (tNums.length) {
+      const {root,offsets} = numsToOffsets(tNums);
+      parts.push(`Trigger root=${root} offsets=[${offsets.join(",")}]`);
+    }
+    if (sNums.length) {
+      const {root,offsets} = numsToOffsets(sNums);
+      parts.push(`Πρόταση root=${root} offsets=[${offsets.join(",")}]`);
+    }
+    d.textContent = "→ " + parts.join("  ·  ");
+  });
+});
+
 /* ══ Αξιολόγηση Trigger+Suggestion per occurrence ══ */
 document.getElementById("ev-run-btn").addEventListener("click", async () => {
   const btn   = document.getElementById("ev-run-btn");
@@ -1122,17 +1150,23 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
   evRes.innerHTML = ""; evRes.style.display = "flex";
 
   try {
-    const trigOffs = parseOffsets(document.getElementById("ev-trigger").value);
-    const suggOffs = parseOffsets(document.getElementById("ev-sugg").value);
-    if (!trigOffs.length || !suggOffs.length) {
+    const trigNums = parseOffsets(document.getElementById("ev-trigger").value);
+    const suggNums = parseOffsets(document.getElementById("ev-sugg").value);
+    if (!trigNums.length || !suggNums.length) {
       evRes.innerHTML='<div class="bt-empty">Συμπλήρωσε και τα δύο πεδία</div>'; return;
     }
+
+    // Derive offsets from the actual numbers
+    const { root: tRoot, offsets: trigOffs } = numsToOffsets(trigNums);
+    const { root: sRoot, offsets: suggOffsRaw } = numsToOffsets(suggNums);
+    // Express suggestion offsets relative to the trigger root
+    const suggOffs = suggNums.map(n => n - tRoot).sort((a,b)=>a-b);
     const N = suggOffs.length;
 
     const draws = await fetchDrawsSorted();
     if (draws.length < 2) { evRes.innerHTML='<div class="bt-empty">Ανεπαρκείς κληρώσεις</div>'; return; }
 
-    const occurrences = [];  // {drawNo, root, trigNums, suggNums, hits}
+    const occurrences = [];
     const hitDist = {};
 
     for (let i = 0; i < draws.length - 1; i++) {
@@ -1143,7 +1177,7 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
         // Exact trigger check
         const allTrigOk = trigOffs.every(o => { const n=root+o; return n>=1&&n<=80&&prevSet.has(n); });
         if (!allTrigOk) continue;
-        // No extra numbers in range (exact)
+        // No extra numbers in the trigger range (exact pattern)
         const maxOff = Math.max(...trigOffs);
         let extraInRange = false;
         for (let o = 0; o <= maxOff; o++) {
@@ -1153,16 +1187,15 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
         if (extraInRange) continue;
 
         // Count suggestion hits in next draw
-        const suggNums   = suggOffs.map(o=>root+o).filter(n=>n>=1&&n<=80);
-        const trigNums   = trigOffs.map(o=>root+o);
-        const hitNums    = suggNums.filter(n=>nextSet.has(n));
-        const hits       = hitNums.length;
+        const sNums   = suggOffs.map(o=>root+o).filter(n=>n>=1&&n<=80);
+        const tNums   = trigOffs.map(o=>root+o);
+        const hitArr  = sNums.filter(n=>nextSet.has(n));
+        const hits    = hitArr.length;
 
         hitDist[hits] = (hitDist[hits]||0) + 1;
         occurrences.push({
-          drawNo:   draws[i].drawNo,
-          nextDrawNo: draws[i+1].drawNo,
-          root, trigNums, suggNums, hitNums, hits
+          drawNo: draws[i].drawNo, nextDrawNo: draws[i+1].drawNo,
+          root, trigNums: tNums, suggNums: sNums, hitNums: hitArr, hits
         });
       }
     }
@@ -1171,7 +1204,6 @@ document.getElementById("ev-run-btn").addEventListener("click", async () => {
       evRes.innerHTML=`<div class="bt-empty">Ο trigger δεν πυροδότησε καμία φορά στις ${draws.length} κληρώσεις.</div>`; return;
     }
 
-    // Sort by hits desc, then drawNo
     occurrences.sort((a,b) => b.hits-a.hits || b.drawNo-a.drawNo);
     const total = occurrences.length;
 
